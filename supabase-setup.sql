@@ -120,6 +120,14 @@ CREATE INDEX IF NOT EXISTS idx_requests_org_id    ON officer_requests(org_id);
 CREATE INDEX IF NOT EXISTS idx_requests_status    ON officer_requests(status);
 
 -- ============================================================
+-- GRANTS (required before RLS policies take effect)
+-- ============================================================
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 
