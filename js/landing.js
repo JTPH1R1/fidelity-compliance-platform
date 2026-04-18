@@ -4,6 +4,22 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  // Render admin-managed news
+  const newsContainer = document.getElementById('news-container');
+  if (newsContainer) {
+    const items = PLATFORM.get('news_items', []);
+    const published = items.filter(n => n.published !== false);
+    newsContainer.innerHTML = published.map(n => `
+      <div class="update-card">
+        <div class="update-date">${PLATFORM.esc(n.date)}</div>
+        <div class="update-cat"><span class="badge ${PLATFORM.esc(n.badgeClass)}">${PLATFORM.esc(n.badge)}</span></div>
+        <div class="update-title">${PLATFORM.esc(n.title)}</div>
+        <div class="update-text">${PLATFORM.esc(n.body)}</div>
+        ${n.link ? `<a href="${PLATFORM.esc(n.link)}" target="_blank" rel="noopener" class="update-link">${PLATFORM.esc(n.linkText || 'Read more ↗')}</a>` : ''}
+      </div>
+    `).join('');
+  }
+
   // Sticky nav scroll effect
   const nav = document.getElementById('landing-nav');
   if (nav) {

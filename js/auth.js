@@ -5,6 +5,14 @@
 
 const Auth = {
 
+  // Admin credentials (demo — production requires server-side auth)
+  ADMIN_EMAIL: 'admin@fidelityassessors.mw',
+  _adminHash: null,
+  getAdminHash() {
+    if (!this._adminHash) this._adminHash = this.simpleHash('FidelityAdmin@2024!');
+    return this._adminHash;
+  },
+
   // ---------------------------------------------------------------------------
   // Tab switching (Login / Register)
   // ---------------------------------------------------------------------------
@@ -96,36 +104,29 @@ const Auth = {
       const userId = 'u_' + Date.now();
       const now = new Date().toISOString();
 
+      const settings = PLATFORM.get('platform_settings', {});
       users[email] = {
-        id: userId,
-        email,
-        name,
-        // In production: never store plain-text passwords. Use bcrypt server-side.
-        // This is a frontend demo — storing hashed would require Web Crypto API.
-        // Marked clearly for production upgrade.
+        id: userId, email, name,
         passwordHash: this.simpleHash(pass),
-        orgName,
-        sector,
-        size,
-        address: '',
-        contactRole: '',
-        contactPhone: '',
-        registeredAt: now,
-        lastLogin: now,
-        plan: 'free'
+        orgName, sector, size,
+        address: '', contactRole: '', contactPhone: '',
+        registeredAt: now, lastLogin: now,
+        plan: 'free',
+        status: settings.requireApproval ? 'pending' : 'active'
       };
 
       PLATFORM.store('users', users);
-
-      // Set current session
-      const session = { userId, email, orgName, name, loginTime: now };
-      PLATFORM.store('currentUser', session);
-
-      // Log activity
       this.logActivity(userId, 'registration', `${orgName} account created`);
 
-      this.showMsg(msg, 'success', 'Account created! Redirecting to your dashboard...');
-      setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+      if (settings.requireApproval) {
+        this.showMsg(msg, 'success', 'Account created! Pending admin approval — you will be notified when activated.');
+        setTimeout(() => { window.location.href = 'auth.html'; }, 2200);
+      } else {
+        const session = { userId, email, orgName, name, loginTime: now };
+        PLATFORM.store('currentUser', session);
+        this.showMsg(msg, 'success', 'Account created! Redirecting to your dashboard...');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+      }
     }, 600);
   },
 
@@ -150,14 +151,37 @@ const Auth = {
     btn.disabled = true;
 
     setTimeout(() => {
+      // ---- Admin login ----
+      if (email === this.ADMIN_EMAIL) {
+        if (this.simpleHash(password) !== this.getAdminHash()) {
+          this.showMsg(msg, 'error', 'Incorrect admin credentials.');
+          btn.textContent = 'Sign In to Dashboard'; btn.disabled = false; return;
+        }
+        const session = { userId: 'admin_001', email: this.ADMIN_EMAIL, name: 'Platform Administrator', isAdmin: true, loginTime: new Date().toISOString() };
+        PLATFORM.store('currentUser', session);
+        this.showMsg(msg, 'success', 'Welcome, Administrator. Redirecting to Admin Panel...');
+        setTimeout(() => { window.location.href = 'admin.html'; }, 900);
+        return;
+      }
+
+      // ---- Regular user login ----
       const users = PLATFORM.get('users', {});
       const user  = users[email];
 
       if (!user || user.passwordHash !== this.simpleHash(password)) {
         this.showMsg(msg, 'error', 'Incorrect email or password. Please try again.');
-        btn.textContent = 'Sign In to Dashboard';
-        btn.disabled = false;
-        return;
+        btn.textContent = 'Sign In to Dashboard'; btn.disabled = false; return;
+      }
+
+      if (user.status === 'suspended') {
+        this.showMsg(msg, 'error', 'Your account has been suspended. Contact support@fidelityassessors.mw');
+        btn.textContent = 'Sign In to Dashboard'; btn.disabled = false; return;
+      }
+
+      const settings = PLATFORM.get('platform_settings', {});
+      if (user.status === 'pending' && settings.requireApproval) {
+        this.showMsg(msg, 'error', 'Your account is pending admin approval. You will be notified once activated.');
+        btn.textContent = 'Sign In to Dashboard'; btn.disabled = false; return;
       }
 
       // Update last login
@@ -165,11 +189,7 @@ const Auth = {
       users[email] = user;
       PLATFORM.store('users', users);
 
-      // Set session
-      const session = {
-        userId: user.id, email, orgName: user.orgName,
-        name: user.name, loginTime: new Date().toISOString()
-      };
+      const session = { userId: user.id, email, orgName: user.orgName, name: user.name, loginTime: new Date().toISOString() };
       PLATFORM.store('currentUser', session);
       if (remember) PLATFORM.store('rememberedEmail', email);
 

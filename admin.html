@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    /* ---- Admin-specific overrides ---- */
+    .topnav-tagline { color: var(--danger) !important; font-weight: 700; }
+
+    .admin-alert-bar {
+      background: linear-gradient(90deg, #7b1a14 0%, #a93226 100%);
+      color: #fff; padding: 8px 28px; font-size: 0.78rem; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    /* Card helpers */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+    .card.p-0 { overflow: hidden; }
+    .card-head { padding: 14px 20px; font-size: 0.82rem; font-weight: 800; color: var(--navy); border-bottom: 1px solid var(--border); background: var(--gray-50); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    /* Admin table */
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .admin-table th { background: var(--gray-50); padding: 10px 16px; text-align: left; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    .admin-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .admin-table tr:last-child td { border-bottom: none; }
+    .admin-table tr:hover td { background: var(--gray-50); }
+
+    /* Action buttons */
+    .btn-action { padding: 4px 12px; border-radius: var(--radius-sm); border: 1px solid; font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all 0.15s; white-space: nowrap; }
+    .btn-approve { background: var(--teal-pale); color: var(--teal); border-color: #a8ddd0; }
+    .btn-approve:hover { background: var(--teal); color: #fff; }
+    .btn-warn { background: var(--warning-light); color: var(--warning); border-color: #f0d080; }
+    .btn-warn:hover { background: var(--warning); color: #fff; }
+    .btn-danger { background: var(--danger-pale); color: var(--danger); border-color: #f5c6c3; }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    /* Plan badges */
+    .plan-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+    .plan-free { background: var(--gray-100); color: var(--text-muted); }
+    .plan-standard { background: #e8eef5; color: var(--navy-light); }
+    .plan-enterprise { background: var(--gold-pale); color: var(--gold-dark); border: 1px solid rgba(244,166,32,0.3); }
+
+    /* Page layout */
+    .app-main-inner { padding: 28px; max-width: 1200px; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; }
+    .page-title { font-size: 1.4rem; font-weight: 900; color: var(--navy); margin: 0 0 4px; }
+    .page-sub { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* Toggle switch */
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--gray-300); border-radius: 24px; transition: 0.2s; }
+    .toggle-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .toggle input:checked + .toggle-slider { background: var(--teal); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* Setting row */
+    .setting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .setting-label { font-size: 0.88rem; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
+    .setting-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; max-width: 320px; }
+
+    /* Pending badge on sidebar */
+    #pending-badge { background: var(--danger); color: #fff; font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 10px; margin-left: auto; display: none; }
+
+    /* Admin nav buttons */
+    .admin-nav-btn { width: 100%; }
+  </style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav" id="topnav">
+  <div class="topnav-inner">
+    <a href="admin.html" class="topnav-brand">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" class="topnav-logo-img">
+      <div class="topnav-brand-divider"></div>
+      <div>
+        <div class="topnav-name">Insurance Assessors</div>
+        <div class="topnav-tagline">⚙️ Admin Panel</div>
+      </div>
+    </a>
+    <div style="flex:1"></div>
+    <div class="topnav-actions">
+      <a href="index.html" target="_blank" class="btn btn-outline btn-sm" style="font-size:0.78rem">View Site ↗</a>
+      <span style="font-size:0.78rem;color:var(--text-muted);font-weight:600">Platform Administrator</span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Admin alert bar -->
+<div class="admin-alert-bar">
+  <span>🔐</span>
+  <span>You are in the <strong>Admin Panel</strong> — changes made here affect the live platform immediately.</span>
+</div>
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:var(--radius);font-size:0.87rem;font-weight:600;opacity:0;transform:translateY(20px);transition:all 0.25s;pointer-events:none;z-index:9999;box-shadow:var(--shadow-md)"></div>
+
+<!-- App Layout -->
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="app-sidebar" id="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-logo">
+        <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors">
+      </div>
+      <div class="sidebar-brand-tag">Admin Control Panel</div>
+    </div>
+
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Admin Menu</span>
+      <button class="sidebar-link admin-nav-btn active" data-page="overview" onclick="Admin.showPage('overview')">
+        <span class="s-icon">📊</span> Overview
+      </button>
+      <button class="sidebar-link admin-nav-btn" data-page="users" onclick="Admin.showPage('users')">
+        <span class="s-icon">👥</span> Users
+        <span id="pending-badge"></span>
+      </button>
+      <button class="sidebar-link admin-nav-btn" data-page="audits" onclick="Admin.showPage('audits')">
+        <span class="s-icon">📋</span> Audits
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Content</span>
+      <button class="sidebar-link admin-nav-btn" data-page="content" onclick="Admin.showPage('content')">
+        <span class="s-icon">📰</span> News &amp; Updates
+      </button>
+      <button class="sidebar-link admin-nav-btn" data-page="documents" onclick="Admin.showPage('documents')">
+        <span class="s-icon">📁</span> Document Library
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">System</span>
+      <button class="sidebar-link admin-nav-btn" data-page="settings" onclick="Admin.showPage('settings')">
+        <span class="s-icon">⚙️</span> Settings
+      </button>
+      <a href="dashboard.html" class="sidebar-link" style="text-decoration:none">
+        <span class="s-icon">👤</span> User View
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div style="background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.25);border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:0.62rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.8px">Admin Session</div>
+        <div style="font-size:0.78rem;color:rgba(255,255,255,0.8);font-weight:700;margin-top:2px">Platform Administrator</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.35);margin-top:1px">admin@fidelityassessors.mw</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="app-main" id="admin-content">
+    <div style="padding:40px;text-align:center;color:var(--text-muted)">Loading admin panel...</div>
+  </main>
+
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/checklist-data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

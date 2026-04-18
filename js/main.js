@@ -76,6 +76,14 @@ const PLATFORM = {
   requireAuth() {
     const user = PLATFORM.get('currentUser');
     if (!user) { window.location.href = 'auth.html'; return null; }
+    if (user.isAdmin) { window.location.href = 'admin.html'; return null; }
+    return user;
+  },
+
+  // --- Admin guard ---
+  requireAdmin() {
+    const user = PLATFORM.get('currentUser');
+    if (!user || !user.isAdmin) { window.location.href = 'auth.html'; return null; }
     return user;
   },
 
@@ -83,6 +91,29 @@ const PLATFORM = {
   initials(name) {
     if (!name) return '?';
     return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  },
+
+  // --- Seed default content (runs once) ---
+  seedDefaults() {
+    if (PLATFORM.get('defaults_seeded')) return;
+    if (!PLATFORM.get('news_items')) {
+      PLATFORM.store('news_items', [
+        { id: 'n1', date: '3 June 2024', badge: 'Major', badgeClass: 'badge-danger', title: 'Data Protection Act 2024 Officially Commences', body: "Malawi's Data Protection Act came into force on 3 June 2024. MACRA was formally designated as the data protection authority. All organizations processing personal data of Malawian individuals are now legally bound by its provisions.", link: 'https://macra.mw/wpfd_file/data-protection-act-2024/', linkText: 'Read the Act ↗', published: true },
+        { id: 'n2', date: '2024–2025', badge: 'Registration', badgeClass: 'badge-warning', title: 'MACRA Opens Registration for Data Controllers & Processors', body: 'Organizations that process data of more than 10,000 individuals, or data of national significance, are required to register with MACRA before processing commences. Failure to register is a criminal offence under the Act.', link: 'https://www.dpa.mw/', linkText: 'Visit DPA Malawi ↗', published: true },
+        { id: 'n3', date: '2025', badge: 'Digital Banking', badgeClass: 'badge-teal', title: 'Digital Bank Directive 2025 Includes Data Privacy Requirements', body: "The RBM's Financial Services Directive 2025 mandates that digital banks maintain cybersecurity risk management and data privacy standards aligned with the DPA 2024.", link: 'https://www.rbm.mw/', linkText: 'RBM Website ↗', published: true }
+      ]);
+    }
+    if (!PLATFORM.get('doc_library')) {
+      PLATFORM.store('doc_library', [
+        { id: 'd1', title: 'Malawi Data Protection Act 2024', desc: 'Official gazette version of the Act as enacted on 3 June 2024.', type: 'Act', url: 'https://macra.mw/wpfd_file/data-protection-act-2024/', date: '2024-06-03' },
+        { id: 'd2', title: 'DPA 2024 Compliance Checklist', desc: 'Our comprehensive 65-question compliance audit checklist covering all 12 obligation areas.', type: 'Tool', url: 'audit.html', date: '2025-01-01' },
+        { id: 'd3', title: 'Record of Processing Activities (RoPA) Template', desc: 'Standard template for documenting your organization\'s processing activities as required by Section 56 DPA 2024.', type: 'Template', url: '#', date: '2025-01-01' },
+        { id: 'd4', title: 'Data Protection Impact Assessment (DPIA) Guide', desc: 'Step-by-step guide for conducting DPIAs for high-risk processing activities under Section 54 DPA 2024.', type: 'Guide', url: '#', date: '2025-01-01' },
+        { id: 'd5', title: 'Privacy Notice Template', desc: 'Customizable privacy notice template compliant with transparency requirements of Section 28 DPA 2024.', type: 'Template', url: '#', date: '2025-01-01' },
+        { id: 'd6', title: 'Data Breach Response Plan', desc: 'Template incident response plan meeting the 72-hour breach notification requirement under Section 50 DPA 2024.', type: 'Template', url: '#', date: '2025-01-01' }
+      ]);
+    }
+    PLATFORM.store('defaults_seeded', true);
   }
 };
 
@@ -90,14 +121,11 @@ const PLATFORM = {
 // Auth state check on page load (for protected pages)
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Update nav urgency: days since act came into force
-  const el = document.getElementById('days-elapsed');
-  if (el) {
-    const days = PLATFORM.daysSince('2024-06-03');
-    el.textContent = days + ' Days';
-  }
+  PLATFORM.seedDefaults();
 
-  // Set today's date
+  const el = document.getElementById('days-elapsed');
+  if (el) { el.textContent = PLATFORM.daysSince('2024-06-03') + ' Days'; }
+
   const todayEl = document.getElementById('today-date');
   if (todayEl) todayEl.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
 });
