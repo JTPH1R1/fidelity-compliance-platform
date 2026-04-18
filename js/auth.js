@@ -112,7 +112,9 @@ const Auth = {
         address: '', contactRole: '', contactPhone: '',
         registeredAt: now, lastLogin: now,
         plan: 'free',
-        status: settings.requireApproval ? 'pending' : 'active'
+        status: settings.requireApproval ? 'pending' : 'active',
+        role: 'company_admin',
+        orgId: userId
       };
 
       PLATFORM.store('users', users);
@@ -189,7 +191,7 @@ const Auth = {
       users[email] = user;
       PLATFORM.store('users', users);
 
-      const session = { userId: user.id, email, orgName: user.orgName, name: user.name, loginTime: new Date().toISOString() };
+      const session = { userId: user.id, email, orgName: user.orgName, name: user.name, role: user.role || 'company_admin', orgId: user.orgId || user.id, loginTime: new Date().toISOString() };
       PLATFORM.store('currentUser', session);
       if (remember) PLATFORM.store('rememberedEmail', email);
 

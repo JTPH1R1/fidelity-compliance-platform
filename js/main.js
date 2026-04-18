@@ -93,9 +93,29 @@ const PLATFORM = {
     return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
   },
 
+  // --- Migrate legacy user records to add role/orgId fields ---
+  migrateUsers() {
+    const users = this.get('users', {});
+    let changed = false;
+    Object.values(users).forEach(u => {
+      if (!u.role)  { u.role  = 'company_admin'; changed = true; }
+      if (!u.orgId) { u.orgId = u.id;            changed = true; }
+    });
+    if (changed) this.store('users', users);
+  },
+
   // --- Seed default content (runs once) ---
   seedDefaults() {
     if (PLATFORM.get('defaults_seeded')) return;
+    // Default platform settings with approval required
+    if (!PLATFORM.get('platform_settings')) {
+      PLATFORM.store('platform_settings', {
+        requireApproval: true, registrationOpen: true,
+        platformName: 'Fidelity Compliance Platform',
+        supportEmail: 'support@fidelityassessors.mw',
+        dpoEmail: 'dpo@fidelityassessors.mw'
+      });
+    }
     if (!PLATFORM.get('news_items')) {
       PLATFORM.store('news_items', [
         { id: 'n1', date: '3 June 2024', badge: 'Major', badgeClass: 'badge-danger', title: 'Data Protection Act 2024 Officially Commences', body: "Malawi's Data Protection Act came into force on 3 June 2024. MACRA was formally designated as the data protection authority. All organizations processing personal data of Malawian individuals are now legally bound by its provisions.", link: 'https://macra.mw/wpfd_file/data-protection-act-2024/', linkText: 'Read the Act ↗', published: true },
@@ -122,6 +142,7 @@ const PLATFORM = {
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
   PLATFORM.seedDefaults();
+  PLATFORM.migrateUsers();
 
   const el = document.getElementById('days-elapsed');
   if (el) { el.textContent = PLATFORM.daysSince('2024-06-03') + ' Days'; }

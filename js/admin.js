@@ -13,9 +13,21 @@ const Admin = {
   init() {
     const session = PLATFORM.requireAdmin();
     if (!session) return;
+    this.migrateUserData();
     this.seedDemoData();
     this.showPage('overview');
     this.updatePendingBadge();
+  },
+
+  // Ensure all user records have role + orgId fields
+  migrateUserData() {
+    const users = PLATFORM.get('users', {});
+    let changed = false;
+    Object.values(users).forEach(u => {
+      if (!u.role)  { u.role  = 'company_admin'; changed = true; }
+      if (!u.orgId) { u.orgId = u.id;            changed = true; }
+    });
+    if (changed) PLATFORM.store('users', users);
   },
 
   // ---------------------------------------------------------------------------
@@ -44,7 +56,7 @@ const Admin = {
       if (users[d.email]) return;
       const uid = 'demo_' + (i + 1);
       const reg = new Date(Date.now() - (30 - i * 4) * 86400000).toISOString();
-      users[d.email] = { id: uid, email: d.email, name: d.name, passwordHash: h('Demo1234!'), orgName: d.orgName, sector: d.sector, size: d.size, address: 'Lilongwe, Malawi', contactRole: 'Compliance Officer', contactPhone: '', registeredAt: reg, lastLogin: reg, plan: d.plan, status: d.status };
+      users[d.email] = { id: uid, email: d.email, name: d.name, passwordHash: h('Demo1234!'), orgName: d.orgName, sector: d.sector, size: d.size, address: 'Lilongwe, Malawi', contactRole: 'Compliance Officer', contactPhone: '', registeredAt: reg, lastLogin: reg, plan: d.plan, status: d.status, role: 'company_admin', orgId: uid };
 
       if (d.score !== null) {
         // Build plausible audit answers based on score level
@@ -85,8 +97,10 @@ const Admin = {
   },
 
   updatePendingBadge() {
-    const users = PLATFORM.get('users', {});
-    const n = Object.values(users).filter(u => u.status === 'pending').length;
+    const users    = PLATFORM.get('users', {});
+    const pendingUsers = Object.values(users).filter(u => u.status === 'pending').length;
+    const pendingReqs  = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending').length;
+    const n = pendingUsers + pendingReqs;
     const badge = document.getElementById('pending-badge');
     if (badge) { badge.textContent = n; badge.style.display = n > 0 ? 'inline-flex' : 'none'; }
   },
@@ -177,57 +191,251 @@ const Admin = {
   // USERS
   // ---------------------------------------------------------------------------
   renderUsers() {
-    const users = PLATFORM.get('users', {});
-    const list = Object.values(users).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
-    const filter = document.getElementById('user-filter') ? document.getElementById('user-filter').value : 'all';
+    const users    = PLATFORM.get('users', {});
+    const list     = Object.values(users).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
+    const pending  = list.filter(u => u.status === 'pending');
+    const requests = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending');
+
+    // Group by orgId
+    const orgs = {};
+    list.forEach(u => {
+      const oid = u.orgId || u.id;
+      if (!orgs[oid]) orgs[oid] = { orgId: oid, orgName: u.orgName, members: [] };
+      orgs[oid].members.push(u);
+    });
+    const orgList = Object.values(orgs).sort((a,b) => a.orgName.localeCompare(b.orgName));
+
+    const roleChip = (role) => {
+      const isAdmin = role === 'company_admin';
+      return `<span style="font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${isAdmin ? 'var(--gold-pale)' : '#e8eef5'};color:${isAdmin ? 'var(--gold-dark)' : 'var(--navy-light)'}">${isAdmin ? '⭐ Admin' : '👤 Officer'}</span>`;
+    };
 
     return `
     <div class="app-main-inner">
       <div class="page-header">
-        <div><h1 class="page-title">User Management</h1><div class="page-sub">${list.length} registered account${list.length !== 1 ? 's' : ''}</div></div>
-        <div style="display:flex;gap:10px">
-          <select class="form-control" style="width:auto" onchange="Admin.filterUsers(this.value)" id="user-filter">
-            <option value="all">All Users</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="suspended">Suspended</option>
-          </select>
+        <div><h1 class="page-title">User Management</h1>
+          <div class="page-sub">${list.length} account${list.length !== 1 ? 's' : ''} · ${orgList.length} organization${orgList.length !== 1 ? 's' : ''}${pending.length + requests.length > 0 ? ` · <span style="color:var(--warning);font-weight:700">${pending.length + requests.length} awaiting action</span>` : ''}</div>
         </div>
       </div>
-      <div class="card p-0">
+
+      ${pending.length > 0 ? `
+      <div class="card p-0" style="margin-bottom:20px;border-color:var(--warning)">
+        <div class="card-head" style="background:var(--warning-light);color:var(--warning)">⏳ Pending Account Approvals (${pending.length})</div>
         <table class="admin-table">
-          <thead><tr><th>Organization</th><th>Contact</th><th>Sector</th><th>Plan</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Organization</th><th>Contact</th><th>Sector</th><th>Registered</th><th>Actions</th></tr></thead>
           <tbody>
-            ${list.length === 0 ? '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px">No accounts registered yet</td></tr>' :
-              list.map(u => `<tr id="user-row-${u.id}">
-                <td>
-                  <div style="font-weight:700;color:var(--navy)">${PLATFORM.esc(u.orgName)}</div>
-                  <div style="font-size:0.72rem;color:var(--text-muted)">${PLATFORM.esc(u.size || '')}</div>
-                </td>
-                <td>
-                  <div style="font-size:0.85rem">${PLATFORM.esc(u.name)}</div>
-                  <div style="font-size:0.72rem;color:var(--text-muted)">${PLATFORM.esc(u.email)}</div>
-                </td>
-                <td style="font-size:0.82rem">${PLATFORM.esc(u.sector || '—')}</td>
-                <td><span class="plan-badge plan-${PLATFORM.esc(u.plan || 'free')}">${(u.plan || 'free').charAt(0).toUpperCase() + (u.plan || 'free').slice(1)}</span></td>
-                <td style="font-size:0.78rem;color:var(--text-muted)">${PLATFORM.timeAgo(u.registeredAt)}</td>
-                <td>${this.statusBadge(u.status)}</td>
-                <td>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    ${u.status === 'pending' ? `<button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(u.email)}')">✓ Approve</button>` : ''}
-                    ${u.status === 'active' ? `<button class="btn-action btn-warn" onclick="Admin.suspendUser('${PLATFORM.esc(u.email)}')">Suspend</button>` : ''}
-                    ${u.status === 'suspended' ? `<button class="btn-action btn-approve" onclick="Admin.activateUser('${PLATFORM.esc(u.email)}')">Activate</button>` : ''}
-                    <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(u.email)}')">Delete</button>
-                  </div>
-                </td>
-              </tr>`).join('')}
+            ${pending.map(u => `<tr>
+              <td><div style="font-weight:700">${PLATFORM.esc(u.orgName)}</div><div style="font-size:0.72rem;color:var(--text-muted)">${PLATFORM.esc(u.email)}</div></td>
+              <td style="font-size:0.85rem">${PLATFORM.esc(u.name)}</td>
+              <td style="font-size:0.82rem">${PLATFORM.esc(u.sector || '—')}</td>
+              <td style="font-size:0.78rem;color:var(--text-muted)">${PLATFORM.timeAgo(u.registeredAt)}</td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(u.email)}')">✓ Approve</button>
+                  <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(u.email)}')">Reject &amp; Delete</button>
+                </div>
+              </td>
+            </tr>`).join('')}
           </tbody>
         </table>
+      </div>` : ''}
+
+      ${requests.length > 0 ? `
+      <div class="card p-0" style="margin-bottom:20px;border-color:#a8ddd0">
+        <div class="card-head" style="background:var(--teal-pale);color:var(--teal)">👥 Compliance Officer Add Requests (${requests.length})</div>
+        <table class="admin-table">
+          <thead><tr><th>Organization</th><th>Proposed Officer</th><th>Requested By</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${requests.map(r => `<tr>
+              <td style="font-weight:700">${PLATFORM.esc(r.orgName)}</td>
+              <td><div style="font-weight:600">${PLATFORM.esc(r.name)}</div><div style="font-size:0.72rem;color:var(--text-muted)">${PLATFORM.esc(r.email)}</div></td>
+              <td style="font-size:0.82rem;color:var(--text-muted)">${PLATFORM.esc(r.requestedBy)}</td>
+              <td style="font-size:0.78rem;color:var(--text-muted)">${PLATFORM.timeAgo(r.createdAt)}</td>
+              <td>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="btn-action btn-approve" onclick="Admin.approveOfficerRequest('${r.id}')">✓ Approve &amp; Create Account</button>
+                  <button class="btn-action btn-danger" onclick="Admin.rejectOfficerRequest('${r.id}')">Reject</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+
+      <!-- Add User to Company (hidden by default) -->
+      <div class="card" id="add-user-form" style="display:none;margin-bottom:20px">
+        <div class="card-head" id="add-user-form-title">➕ Add Member to Organization</div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <input type="hidden" id="add-user-org-id">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-control" id="add-user-name" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-control" id="add-user-email" type="email" placeholder="email@company.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="form-control" id="add-user-role">
+              <option value="compliance_officer">Compliance Officer</option>
+              <option value="company_admin">Company Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Temporary Password</label>
+            <input class="form-control" id="add-user-pass" value="Change1234!">
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-teal btn-sm" onclick="Admin.addUserToOrg()">Create Account</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('add-user-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Organizations -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        ${orgList.length === 0 ? '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted)">No accounts registered yet.</div>' :
+          orgList.map(org => `
+          <div class="card p-0">
+            <div class="card-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div>
+                <span style="font-weight:800;color:var(--navy)">${PLATFORM.esc(org.orgName)}</span>
+                <span style="font-size:0.72rem;color:var(--text-muted);margin-left:10px">${org.members.length} member${org.members.length !== 1 ? 's' : ''}</span>
+              </div>
+              <button class="btn-action btn-approve" style="padding:5px 14px" onclick="Admin.showAddUserForm('${PLATFORM.esc(org.orgId)}')">+ Add Member</button>
+            </div>
+            <table class="admin-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Plan</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+              <tbody>
+                ${org.members.map(m => `<tr>
+                  <td style="font-weight:600">${PLATFORM.esc(m.name)}</td>
+                  <td style="font-size:0.82rem;color:var(--text-muted)">${PLATFORM.esc(m.email)}</td>
+                  <td>${roleChip(m.role || 'company_admin')}</td>
+                  <td><span class="plan-badge plan-${PLATFORM.esc(m.plan || 'free')}">${(m.plan || 'free').charAt(0).toUpperCase() + (m.plan || 'free').slice(1)}</span></td>
+                  <td>${this.statusBadge(m.status)}</td>
+                  <td style="font-size:0.78rem;color:var(--text-muted)">${m.lastLogin ? PLATFORM.timeAgo(m.lastLogin) : 'Never'}</td>
+                  <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      ${m.status === 'pending'    ? `<button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(m.email)}')">✓ Approve</button>` : ''}
+                      ${m.status === 'active' && (m.role || 'company_admin') !== 'company_admin' ? `<button class="btn-action btn-warn" onclick="Admin.promoteToAdmin('${PLATFORM.esc(m.email)}')">Make Admin</button>` : ''}
+                      ${m.status === 'active'     ? `<button class="btn-action btn-warn" onclick="Admin.suspendUser('${PLATFORM.esc(m.email)}')">Suspend</button>` : ''}
+                      ${m.status === 'suspended'  ? `<button class="btn-action btn-approve" onclick="Admin.activateUser('${PLATFORM.esc(m.email)}')">Activate</button>` : ''}
+                      <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(m.email)}')">Delete</button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`).join('')}
       </div>
     </div>`;
   },
 
-  filterUsers(val) { this.showPage('users'); },
+  showAddUserForm(orgId) {
+    const form = document.getElementById('add-user-form');
+    if (!form) { this.showPage('users'); setTimeout(() => this.showAddUserForm(orgId), 80); return; }
+    const users = PLATFORM.get('users', {});
+    const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
+    const orgName = member ? member.orgName : 'Organization';
+    document.getElementById('add-user-org-id').value = orgId;
+    document.getElementById('add-user-form-title').textContent = `➕ Add Member to ${orgName}`;
+    ['add-user-name','add-user-email'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('add-user-pass').value = 'Change1234!';
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth' });
+  },
+
+  addUserToOrg() {
+    const orgId = document.getElementById('add-user-org-id').value;
+    const name  = document.getElementById('add-user-name').value.trim();
+    const email = document.getElementById('add-user-email').value.trim().toLowerCase();
+    const role  = document.getElementById('add-user-role').value;
+    const pass  = document.getElementById('add-user-pass').value;
+
+    if (!name || !email) { PLATFORM.toast('Please enter name and email.'); return; }
+    if (!email.includes('@')) { PLATFORM.toast('Please enter a valid email.'); return; }
+
+    const users = PLATFORM.get('users', {});
+    if (users[email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+
+    const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
+    if (!member) { PLATFORM.toast('Organization not found.'); return; }
+
+    const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+    const userId = 'u_' + Date.now();
+    const now = new Date().toISOString();
+
+    users[email] = {
+      id: userId, email, name,
+      passwordHash: h(pass),
+      orgId, orgName: member.orgName,
+      sector: member.sector || '', size: member.size || '',
+      address: member.address || '', contactRole: 'Compliance Officer', contactPhone: '',
+      registeredAt: now, lastLogin: null,
+      plan: member.plan || 'free',
+      status: 'active',
+      role, invitedBy: 'admin@fidelityassessors.mw'
+    };
+    PLATFORM.store('users', users);
+    document.getElementById('add-user-form').style.display = 'none';
+    this.showPage('users');
+    PLATFORM.toast(`✅ ${name} added to ${member.orgName}. Temp password: ${pass}`);
+  },
+
+  approveOfficerRequest(reqId) {
+    const requests = PLATFORM.get('officer_requests', []);
+    const req = requests.find(r => r.id === reqId);
+    if (!req) { PLATFORM.toast('Request not found.'); return; }
+
+    const users = PLATFORM.get('users', {});
+    if (users[req.email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+
+    const member = Object.values(users).find(u => (u.orgId || u.id) === req.orgId);
+    const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+    const tempPass = 'Change1234!';
+    const userId   = 'u_' + Date.now();
+    const now      = new Date().toISOString();
+
+    users[req.email] = {
+      id: userId, email: req.email, name: req.name,
+      passwordHash: h(tempPass),
+      orgId: req.orgId, orgName: req.orgName,
+      sector: member ? member.sector : '', size: member ? member.size : '',
+      address: '', contactRole: 'Compliance Officer', contactPhone: '',
+      registeredAt: now, lastLogin: null,
+      plan: member ? (member.plan || 'free') : 'free',
+      status: 'active',
+      role: 'compliance_officer', invitedBy: req.requestedBy
+    };
+    PLATFORM.store('users', users);
+
+    req.status = 'approved';
+    PLATFORM.store('officer_requests', requests);
+
+    this.updatePendingBadge();
+    this.showPage('users');
+    PLATFORM.toast(`✅ ${req.name} approved. Account created. Temp password: ${tempPass}`);
+  },
+
+  rejectOfficerRequest(reqId) {
+    if (!confirm('Reject this officer request? The company admin will need to resubmit.')) return;
+    const requests = PLATFORM.get('officer_requests', []);
+    const req = requests.find(r => r.id === reqId);
+    if (req) req.status = 'rejected';
+    PLATFORM.store('officer_requests', requests);
+    this.updatePendingBadge();
+    this.showPage('users');
+    PLATFORM.toast('Officer request rejected.');
+  },
+
+  promoteToAdmin(email) {
+    if (!confirm(`Grant company admin rights to ${email}?\n\nThey will be able to request adding compliance officers to their organization.`)) return;
+    const users = PLATFORM.get('users', {});
+    if (users[email]) { users[email].role = 'company_admin'; PLATFORM.store('users', users); }
+    this.showPage('users');
+    PLATFORM.toast('✅ User promoted to company admin.');
+  },
 
   approveUser(email) {
     const users = PLATFORM.get('users', {});
@@ -242,14 +450,14 @@ const Admin = {
     const users = PLATFORM.get('users', {});
     if (users[email]) { users[email].status = 'suspended'; PLATFORM.store('users', users); }
     this.showPage('users');
-    PLATFORM.toast(`Account suspended.`);
+    PLATFORM.toast('Account suspended.');
   },
 
   activateUser(email) {
     const users = PLATFORM.get('users', {});
     if (users[email]) { users[email].status = 'active'; PLATFORM.store('users', users); }
     this.showPage('users');
-    PLATFORM.toast(`✅ Account reactivated.`);
+    PLATFORM.toast('✅ Account reactivated.');
   },
 
   deleteUser(email) {
@@ -261,7 +469,7 @@ const Admin = {
     if (uid) PLATFORM.remove('audit_' + uid);
     this.updatePendingBadge();
     this.showPage('users');
-    PLATFORM.toast(`Account deleted.`);
+    PLATFORM.toast('Account deleted.');
   },
 
   // ---------------------------------------------------------------------------

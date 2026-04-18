@@ -82,6 +82,9 @@
     <div class="sidebar-divider"></div>
     <div class="sidebar-section">
       <span class="sidebar-section-title">Account</span>
+      <button class="sidebar-link" onclick="Dashboard.showPage('team')">
+        <span class="s-icon">👥</span> Team
+      </button>
       <button class="sidebar-link" onclick="Dashboard.showPage('profile')">
         <span class="s-icon">🏢</span> Company Profile
       </button>
@@ -441,6 +444,37 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ======================================
+         PAGE: CRITICAL FLAGS
+         ====================================== -->
+    <div id="page-flags" class="page-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Critical Compliance Flags</div>
+          <div class="page-sub">High-priority legal requirements that are not yet in place</div>
+        </div>
+        <a href="audit.html" class="btn btn-teal">📋 Open Audit</a>
+      </div>
+      <div class="page-body" id="flags-page-body">
+        <div style="text-align:center;padding:40px;color:var(--text-muted)">Loading flags…</div>
+      </div>
+    </div>
+
+    <!-- ======================================
+         PAGE: TEAM
+         ====================================== -->
+    <div id="page-team" class="page-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Team Management</div>
+          <div class="page-sub">Compliance officers registered under your organization</div>
+        </div>
+      </div>
+      <div class="page-body" id="team-page-body">
+        <div style="text-align:center;padding:40px;color:var(--text-muted)">Loading team…</div>
       </div>
     </div>
 
