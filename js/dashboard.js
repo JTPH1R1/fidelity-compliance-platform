@@ -51,6 +51,9 @@ const Dashboard = {
     // Load profile edit fields
     this.populateProfileForm();
 
+    // Render compliance schedule widget (if fiscal year is configured)
+    this.renderComplianceScheduleWidget();
+
     // Show compliance banner if needed
     this.checkComplianceBanner();
   },
@@ -79,8 +82,9 @@ const Dashboard = {
     if (pageId === 'privacy') { window.location.href = 'privacy-policy.html'; return; }
 
     // Dynamic renders
-    if (pageId === 'flags') this.renderFlagsPage();
-    if (pageId === 'team')  this.renderTeamPage();
+    if (pageId === 'flags')    this.renderFlagsPage();
+    if (pageId === 'team')     this.renderTeamPage();
+    if (pageId === 'calendar') this.renderCalendarPage();
   },
 
   // ---------------------------------------------------------------------------
@@ -277,6 +281,7 @@ const Dashboard = {
     set('edit-contact-role', u.contactRole);
     set('edit-contact-email', u.email);
     set('edit-contact-phone', u.contactPhone);
+    if (u.fiscalYearStart) set('edit-fiscal-start', String(u.fiscalYearStart));
   },
 
   // ---------------------------------------------------------------------------
@@ -289,13 +294,15 @@ const Dashboard = {
 
     const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
-    user.orgName      = val('edit-orgname') || user.orgName;
-    user.sector       = val('edit-sector')  || user.sector;
-    user.size         = val('edit-size');
-    user.address      = val('edit-address');
-    user.name         = val('edit-contact-name') || user.name;
-    user.contactRole  = val('edit-contact-role');
-    user.contactPhone = val('edit-contact-phone');
+    user.orgName        = val('edit-orgname') || user.orgName;
+    user.sector         = val('edit-sector')  || user.sector;
+    user.size           = val('edit-size');
+    user.address        = val('edit-address');
+    user.name           = val('edit-contact-name') || user.name;
+    user.contactRole    = val('edit-contact-role');
+    user.contactPhone   = val('edit-contact-phone');
+    const fy = document.getElementById('edit-fiscal-start');
+    if (fy && fy.value) user.fiscalYearStart = parseInt(fy.value);
 
     users[this.user.email] = user;
     PLATFORM.store('users', users);
@@ -396,6 +403,217 @@ const Dashboard = {
     PLATFORM.remove('activity_' + this.user.userId);
     alert('Your account and all data have been deleted. You will now be redirected to the home page.');
     window.location.href = 'index.html';
+  },
+
+  // ---------------------------------------------------------------------------
+  // Compliance Calendar helpers
+  // ---------------------------------------------------------------------------
+  getFiscalStart() {
+    const m  = parseInt(this.userData.fiscalYearStart) || 1; // 1–12
+    const now = new Date();
+    const yr  = (now.getMonth() + 1 >= m) ? now.getFullYear() : now.getFullYear() - 1;
+    return new Date(yr, m - 1, 1);
+  },
+
+  getQuarters() {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const base   = this.getFiscalStart();
+    return [0, 1, 2, 3].map(q => {
+      const s = new Date(base); s.setMonth(s.getMonth() + q * 3);
+      const e = new Date(s);    e.setMonth(e.getMonth() + 3); e.setDate(0);
+      return {
+        id:        s.toISOString().slice(0, 7),
+        qNum:      q + 1,
+        label:     `Q${q + 1}`,
+        dateRange: `${months[s.getMonth()]} ${s.getFullYear()} – ${months[e.getMonth()]} ${e.getFullYear()}`,
+        startDate: s,
+        endDate:   e
+      };
+    });
+  },
+
+  getQuarterStatus(quarter) {
+    const today = new Date();
+    const { startDate, endDate } = quarter;
+
+    // Check for completed audit within this quarter window
+    const auditState = PLATFORM.get('audit_' + this.user.userId);
+    if (auditState && auditState.completedAt) {
+      const d = new Date(auditState.completedAt);
+      if (d >= startDate && d <= endDate) {
+        const score = this.calcScore(auditState.answers || {});
+        const g = this.getGrade(score);
+        return { done: true, icon: '✅', color: g.color, label: 'Audited', score, gradeLabel: g.label, completedDate: auditState.completedAt };
+      }
+    }
+
+    // Check for manual check-in
+    const checkins = PLATFORM.get('chk_' + this.user.userId, []);
+    const checkin  = checkins.find(c => c.quarterId === quarter.id);
+    if (checkin) {
+      return { done: true, icon: '✅', color: 'var(--teal)', label: 'Reviewed', score: checkin.score, gradeLabel: '', completedDate: checkin.completedAt };
+    }
+
+    if (today < startDate) return { done: false, icon: '🔵', color: '#5b8dd9',       label: 'Upcoming' };
+    if (today > endDate)   return { done: false, icon: '❌', color: 'var(--danger)',  label: 'Overdue'  };
+
+    const pct = Math.round((today - startDate) / (endDate - startDate) * 100);
+    if (pct > 75) return { done: false, icon: '⚠️', color: 'var(--warning)', label: 'Due Soon',   pct };
+    return          { done: false, icon: '🔄', color: 'var(--navy)',   label: 'In Progress', pct };
+  },
+
+  logManualCheckin(quarterId) {
+    const checkins = PLATFORM.get('chk_' + this.user.userId, []);
+    const idx = checkins.findIndex(c => c.quarterId === quarterId);
+    const entry = { quarterId, completedAt: new Date().toISOString(), method: 'manual', score: null };
+    if (idx >= 0) checkins[idx] = entry; else checkins.push(entry);
+    PLATFORM.store('chk_' + this.user.userId, checkins);
+    Auth.logActivity(this.user.userId, 'audit', `Logged manual compliance check-in for ${quarterId}`);
+    PLATFORM.toast('✅ Manual check-in recorded.');
+    this.renderCalendarPage();
+    this.renderComplianceScheduleWidget();
+  },
+
+  // ---------------------------------------------------------------------------
+  // Render Compliance Calendar Page
+  // ---------------------------------------------------------------------------
+  renderCalendarPage() {
+    const body = document.getElementById('calendar-page-body');
+    if (!body) return;
+
+    const fiscalStart = parseInt(this.userData.fiscalYearStart) || 0;
+    if (!fiscalStart) {
+      body.innerHTML = `
+        <div class="card" style="max-width:520px;padding:36px;text-align:center">
+          <div style="font-size:2.5rem;margin-bottom:12px">📅</div>
+          <div style="font-weight:800;color:var(--navy);font-size:1.1rem;margin-bottom:8px">Set Your Financial Year Start</div>
+          <div style="color:var(--text-muted);font-size:0.87rem;margin-bottom:20px">To generate your quarterly compliance schedule, tell us when your financial year begins. This takes 10 seconds.</div>
+          <button class="btn btn-teal" onclick="Dashboard.showPage('profile')">Set in Company Profile →</button>
+        </div>`;
+      return;
+    }
+
+    const quarters = this.getQuarters();
+    const fyStart  = this.getFiscalStart();
+    const MONTH    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const fyEnd    = new Date(fyStart); fyEnd.setFullYear(fyEnd.getFullYear() + 1); fyEnd.setDate(fyEnd.getDate() - 1);
+    const fyLabel  = `${MONTH[fyStart.getMonth()]} ${fyStart.getFullYear()} – ${MONTH[fyEnd.getMonth()]} ${fyEnd.getFullYear()}`;
+
+    const statuses  = quarters.map(q => this.getQuarterStatus(q));
+    const doneCount = statuses.filter(s => s.done).length;
+    const overdueCount = statuses.filter(s => !s.done && s.label === 'Overdue').length;
+    const dueCount     = statuses.filter(s => !s.done && s.label === 'Due Soon').length;
+    const overallStatus = overdueCount > 0 ? `<span style="color:var(--danger);font-weight:700">${overdueCount} check-in${overdueCount > 1 ? 's' : ''} overdue</span>` :
+                          dueCount     > 0 ? `<span style="color:var(--warning);font-weight:700">${dueCount} due soon</span>` :
+                          doneCount === 4  ? `<span style="color:var(--teal);font-weight:700">All quarters completed ✓</span>` :
+                          `<span style="color:var(--navy);font-weight:600">On track</span>`;
+
+    const qCard = (q, st) => {
+      const barBg  = st.done ? 'var(--teal-pale)' : st.label === 'Overdue' ? 'var(--danger-pale)' : st.label === 'Due Soon' ? 'var(--warning-light)' : 'var(--gray-100)';
+      const border = st.done ? 'var(--teal)' : st.label === 'Overdue' ? 'var(--danger)' : 'var(--border)';
+      return `
+      <div style="background:var(--surface);border:2px solid ${border};border-radius:var(--radius-md);padding:22px;text-align:center;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:1.7rem">${st.icon}</div>
+        <div style="font-size:1.4rem;font-weight:900;color:var(--navy)">${q.label}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);line-height:1.4">${q.dateRange}</div>
+        <span style="font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;background:${barBg};color:${st.color};align-self:center">${st.label}</span>
+        ${st.done ? `
+          <div style="font-weight:900;color:${st.color};font-size:1.3rem">${st.score !== null ? st.score + '%' : '—'}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">${PLATFORM.formatDate(st.completedDate)}</div>
+          <div style="font-size:0.7rem;font-style:italic;color:var(--text-muted)">${st.gradeLabel}</div>` : ''}
+        ${!st.done && st.pct !== undefined ? `
+          <div style="background:var(--gray-200);height:4px;border-radius:4px;overflow:hidden">
+            <div style="width:${st.pct}%;height:100%;background:${st.color}"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted)">${st.pct}% of quarter elapsed</div>` : ''}
+        ${!st.done && new Date() >= q.startDate ? `
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            <a href="audit.html" class="btn btn-teal btn-sm" style="font-size:0.73rem">Run Audit Now</a>
+            <button onclick="Dashboard.logManualCheckin('${q.id}')" class="btn btn-ghost btn-sm" style="font-size:0.7rem">Log Manual Check-in</button>
+          </div>` : ''}
+        ${!st.done && new Date() < q.startDate ? `<div style="font-size:0.73rem;color:var(--text-muted);margin-top:4px">Starts ${PLATFORM.formatDate(q.startDate.toISOString())}</div>` : ''}
+      </div>`;
+    };
+
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:14px 20px;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius-md)">
+        <span style="font-size:1.4rem">📅</span>
+        <div style="flex:1">
+          <div style="font-weight:800;color:var(--navy)">Fiscal Year: ${fyLabel}</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">${doneCount}/4 check-ins completed · ${overallStatus}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Dashboard.showPage('profile')">Change Fiscal Year</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+        ${quarters.map((q, i) => qCard(q, statuses[i])).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <div class="card">
+          <div class="card-head">📋 What Each Quarterly Review Should Cover</div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:0.86rem">
+              <div style="display:flex;gap:10px"><span>🔄</span><div><strong>Data inventory review</strong> — Have any new data flows, systems, or third-party processors been added since last quarter?</div></div>
+              <div style="display:flex;gap:10px"><span>📝</span><div><strong>Policy currency check</strong> — Are privacy notices, consent forms, and processing agreements still accurate?</div></div>
+              <div style="display:flex;gap:10px"><span>👥</span><div><strong>Staff access audit</strong> — Are only authorized people accessing personal data? Have leavers been removed?</div></div>
+              <div style="display:flex;gap:10px"><span>🚨</span><div><strong>Incident log review</strong> — Were there any near-misses or breaches (even minor) in the quarter?</div></div>
+              <div style="display:flex;gap:10px"><span>📊</span><div><strong>DPIA status</strong> — Any new high-risk processing planned that needs a Data Protection Impact Assessment before it starts?</div></div>
+              <div style="display:flex;gap:10px"><span>🏛️</span><div><strong>Regulatory monitoring</strong> — Any new MACRA guidance or enforcement action in your sector?</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">⚖️ Why Quarterly Cadence Matters Legally</div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:0.86rem">
+              <div style="display:flex;gap:10px"><span>🛡️</span><div><strong>Demonstrable due diligence</strong> — In any MACRA investigation or enforcement action, a documented compliance history is your strongest defence. One-time compliance is not sufficient.</div></div>
+              <div style="display:flex;gap:10px"><span>⏱️</span><div><strong>72-hour breach window</strong> — If a breach occurs, your quarterly audit trail shows MACRA you were actively managing risk, not negligent.</div></div>
+              <div style="display:flex;gap:10px"><span>🔄</span><div><strong>Data processing evolves</strong> — Businesses change. New systems, new staff, new partners — each creates new data flows that must be assessed before they start, not after.</div></div>
+              <div style="display:flex;gap:10px"><span>📈</span><div><strong>Improvement tracking</strong> — Quarterly scores show your compliance is improving over time — critical for board reporting and investor due diligence.</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>`;
+  },
+
+  // ---------------------------------------------------------------------------
+  // Render Compliance Schedule Widget (overview page)
+  // ---------------------------------------------------------------------------
+  renderComplianceScheduleWidget() {
+    const widget = document.getElementById('compliance-schedule-widget');
+    const body   = document.getElementById('compliance-schedule-body');
+    if (!widget || !body) return;
+
+    const fiscalStart = parseInt(this.userData.fiscalYearStart) || 0;
+    if (!fiscalStart) { widget.style.display = 'none'; return; }
+
+    widget.style.display = 'block';
+    const quarters = this.getQuarters();
+    const MONTH    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px">
+        ${quarters.map(q => {
+          const st = this.getQuarterStatus(q);
+          const border = st.done ? 'var(--teal)' : st.label === 'Overdue' ? 'var(--danger)' : st.label === 'Due Soon' ? 'var(--warning)' : 'var(--border)';
+          return `
+          <div style="border:2px solid ${border};border-radius:8px;padding:14px;text-align:center">
+            <div style="font-size:1.3rem">${st.icon}</div>
+            <div style="font-weight:800;color:var(--navy)">${q.label}</div>
+            <div style="font-size:0.68rem;color:var(--text-muted)">${q.dateRange}</div>
+            ${st.done
+              ? `<div style="font-weight:700;color:${st.color};margin-top:4px">${st.score !== null ? st.score + '%' : '✓'}</div>`
+              : `<div style="font-size:0.68rem;font-weight:700;color:${st.color};margin-top:4px">${st.label}</div>`}
+            ${!st.done && new Date() >= q.startDate
+              ? `<a href="audit.html" style="display:block;margin-top:6px;font-size:0.65rem;font-weight:700;color:var(--teal)">Run now →</a>`
+              : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
   },
 
   // ---------------------------------------------------------------------------
