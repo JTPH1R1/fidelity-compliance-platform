@@ -73,7 +73,25 @@ const PLATFORM = {
   },
 
   // --- Auth guard (redirect if not logged in) ---
-  requireAuth() {
+  async requireAuth() {
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const session = await DB.getSession();
+        if (session) {
+          const profile = await DB.getProfile(session.user.id);
+          if (profile) {
+            if (profile.role === 'platform_admin') { window.location.href = 'admin.html'; return null; }
+            const n = DB.normalizeProfile(profile);
+            const u = { userId: n.id, email: n.email, orgName: n.orgName, name: n.name, role: n.role, orgId: n.orgId, loginTime: PLATFORM.get('currentUser')?.loginTime || new Date().toISOString() };
+            PLATFORM.store('currentUser', u);
+            return u;
+          }
+        }
+      } catch(e) { console.warn('[PLATFORM] requireAuth DB check failed:', e.message); }
+      window.location.href = 'auth.html';
+      return null;
+    }
+    // localStorage fallback
     const user = PLATFORM.get('currentUser');
     if (!user) { window.location.href = 'auth.html'; return null; }
     if (user.isAdmin) { window.location.href = 'admin.html'; return null; }
@@ -81,7 +99,24 @@ const PLATFORM = {
   },
 
   // --- Admin guard ---
-  requireAdmin() {
+  async requireAdmin() {
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const session = await DB.getSession();
+        if (session) {
+          const profile = await DB.getProfile(session.user.id);
+          if (profile && profile.role === 'platform_admin') {
+            const u = { userId: profile.id, email: profile.email, name: profile.full_name || 'Platform Administrator', isAdmin: true, loginTime: new Date().toISOString() };
+            PLATFORM.store('currentUser', u);
+            return u;
+          }
+          if (session) { window.location.href = 'dashboard.html'; return null; }
+        }
+      } catch(e) { console.warn('[PLATFORM] requireAdmin DB check failed:', e.message); }
+      window.location.href = 'auth.html';
+      return null;
+    }
+    // localStorage fallback
     const user = PLATFORM.get('currentUser');
     if (!user || !user.isAdmin) { window.location.href = 'auth.html'; return null; }
     return user;
@@ -143,6 +178,7 @@ const PLATFORM = {
 document.addEventListener('DOMContentLoaded', () => {
   PLATFORM.seedDefaults();
   PLATFORM.migrateUsers();
+  if (typeof DB !== 'undefined') DB.init();
 
   const el = document.getElementById('days-elapsed');
   if (el) { el.textContent = PLATFORM.daysSince('2024-06-03') + ' Days'; }
