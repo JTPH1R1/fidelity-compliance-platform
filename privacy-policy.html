@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    body { background: var(--bg); }
+    .pp-nav { background: var(--navy); position: sticky; top: 0; z-index: 100; padding: 14px 28px; display: flex; align-items: center; gap: 16px; }
+    .pp-nav a { color: rgba(255,255,255,0.7); font-size: 0.87rem; }
+    .pp-nav a:hover { color: #fff; }
+    .pp-nav-logo { display: flex; align-items: center; gap: 10px; }
+.pp-nav-name { font-weight: 800; color: #fff; font-size: 0.9rem; }
+
+    .pp-hero { background: linear-gradient(135deg, var(--navy) 0%, #1a3c7a 100%); padding: 48px 0 36px; }
+    .pp-hero h1 { color: #fff; font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 10px; }
+    .pp-hero p { color: rgba(255,255,255,0.65); font-size: 0.95rem; line-height: 1.7; max-width: 600px; }
+    .pp-meta-strip { display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap; }
+    .pp-meta-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.55); }
+    .pp-meta-item strong { color: rgba(255,255,255,0.85); }
+
+    .pp-layout { display: grid; grid-template-columns: 220px 1fr; gap: 32px; padding: 40px 0 60px; }
+    .pp-toc { position: sticky; top: 70px; align-self: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .pp-toc-title { padding: 12px 16px; font-size: 0.75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); background: var(--gray-50); }
+    .pp-toc-links { display: flex; flex-direction: column; padding: 6px 0; }
+    .pp-toc-link { padding: 7px 16px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; transition: all 0.15s; text-decoration: none; display: block; border-left: 3px solid transparent; }
+    .pp-toc-link:hover { color: var(--navy); background: var(--gray-50); border-left-color: var(--border); text-decoration: none; }
+
+    .pp-body { display: flex; flex-direction: column; gap: 0; }
+    .pp-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 16px; }
+    .pp-sec-head { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--gray-50); }
+    .pp-sec-icon { font-size: 1.4rem; }
+    .pp-sec-title { font-size: 1rem; font-weight: 800; color: var(--navy); }
+    .pp-sec-body { padding: 22px 24px; font-size: 0.9rem; color: var(--text-soft); line-height: 1.82; }
+    .pp-sec-body h4 { font-size: 0.82rem; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.4px; margin: 20px 0 10px; }
+    .pp-sec-body h4:first-child { margin-top: 0; }
+    .pp-sec-body p { margin: 0 0 14px; }
+    .pp-sec-body p:last-child { margin-bottom: 0; }
+    .pp-sec-body ul { margin: 0 0 14px; padding-left: 20px; }
+    .pp-sec-body ul li { margin-bottom: 7px; }
+    .pp-sec-body strong { color: var(--navy); }
+    .pp-sec-body a { color: var(--teal-light); }
+
+    .dpa-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--teal-pale); border: 1px solid #a8ddd0; color: var(--teal); font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+    .rights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .right-card { background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .right-card-icon { font-size: 1.2rem; margin-bottom: 6px; }
+    .right-card-title { font-size: 0.8rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .right-card-text { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+
+    .contact-box { background: linear-gradient(135deg, var(--navy) 0%, #1a3c7a 100%); border-radius: var(--radius); padding: 22px 24px; margin-top: 8px; }
+    .contact-box-title { font-size: 0.78rem; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .contact-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .contact-row:last-child { margin-bottom: 0; }
+    .contact-label { font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); width: 80px; flex-shrink: 0; padding-top: 2px; }
+    .contact-val { font-size: 0.85rem; color: rgba(255,255,255,0.85); line-height: 1.5; }
+    .contact-val a { color: var(--gold); }
+
+    .retention-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.83rem; }
+    .retention-table th { background: var(--gray-100); color: var(--navy); font-weight: 700; padding: 9px 12px; text-align: left; border-bottom: 2px solid var(--border); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; }
+    .retention-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text-soft); vertical-align: top; }
+    .retention-table tr:last-child td { border-bottom: none; }
+    .retention-table tr:hover td { background: var(--gray-50); }
+
+    .notice-box { background: var(--info-light); border: 1px solid #c0def4; border-left: 4px solid var(--info); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 16px; font-size: 0.85rem; color: #1a4a6e; line-height: 1.65; }
+    .notice-box strong { color: #0f3254; }
+
+    @media (max-width: 768px) {
+      .pp-layout { grid-template-columns: 1fr; }
+      .pp-toc { position: static; }
+      .rights-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="pp-nav">
+  <div class="pp-nav-logo">
+    <div style="background:#fff;border-radius:7px;padding:5px 11px;display:flex;align-items:center">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" style="height:28px;width:auto;display:block">
+    </div>
+    <span class="pp-nav-name">Insurance Assessors</span>
+  </div>
+  <div style="flex:1"></div>
+  <a href="index.html">Home</a>
+  <a href="auth.html" style="margin-left:8px">Sign In</a>
+</nav>
+
+<div class="pp-hero">
+  <div class="container">
+    <div style="margin-bottom:12px">
+      <span class="dpa-badge">⚖️ DPA 2024 Compliant</span>
+    </div>
+    <h1>Privacy Policy</h1>
+    <p>Fidelity Insurance Assessors is committed to protecting the personal data of every organization and individual who uses this platform. This policy sets out how we collect, use, store, and protect your data in full compliance with the Malawi Data Protection Act 2024.</p>
+    <div class="pp-meta-strip">
+      <div class="pp-meta-item">📅 <strong>Effective:</strong> 3 June 2024</div>
+      <div class="pp-meta-item">🔄 <strong>Last Reviewed:</strong> January 2025</div>
+      <div class="pp-meta-item">📋 <strong>Version:</strong> 1.0</div>
+      <div class="pp-meta-item">⚖️ <strong>Governed by:</strong> Malawi DPA 2024 (MACRA)</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="pp-layout">
+
+    <!-- TOC -->
+    <div class="pp-toc">
+      <div class="pp-toc-title">Contents</div>
+      <div class="pp-toc-links">
+        <a class="pp-toc-link" href="#s1">1. Who We Are</a>
+        <a class="pp-toc-link" href="#s2">2. What We Collect</a>
+        <a class="pp-toc-link" href="#s3">3. Why We Process It</a>
+        <a class="pp-toc-link" href="#s4">4. Lawful Basis</a>
+        <a class="pp-toc-link" href="#s5">5. How Long We Keep It</a>
+        <a class="pp-toc-link" href="#s6">6. Who We Share It With</a>
+        <a class="pp-toc-link" href="#s7">7. Your Rights</a>
+        <a class="pp-toc-link" href="#s8">8. Data Security</a>
+        <a class="pp-toc-link" href="#s9">9. Children</a>
+        <a class="pp-toc-link" href="#s10">10. International Transfers</a>
+        <a class="pp-toc-link" href="#s11">11. Policy Changes</a>
+        <a class="pp-toc-link" href="#s12">12. Contact &amp; DPO</a>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="pp-body">
+
+      <div class="notice-box">
+        <strong>Your rights at a glance:</strong> You may access, correct, delete, or export your personal data at any time from your account settings. To exercise any right or to contact our Data Protection Officer, email <strong>dpo@fidelityassessors.mw</strong>.
+      </div>
+
+      <!-- 1. Who We Are -->
+      <div class="pp-section" id="s1">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🏢</span>
+          <span class="pp-sec-title">1. Who We Are (Data Controller)</span>
+        </div>
+        <div class="pp-sec-body">
+          <p><strong>Fidelity Insurance Assessors</strong> ("Fidelity", "we", "us", "our") is the data controller for all personal data collected and processed through the Fidelity Compliance Platform.</p>
+          <p>We are a Malawian company providing data protection compliance audit services to organizations operating under the Malawi Data Protection Act 2024. Our compliance services are regulated by the Malawi Communications Regulatory Authority (MACRA) and the Office of the Data Protection Commissioner.</p>
+          <h4>Registered Details</h4>
+          <ul>
+            <li><strong>Company:</strong> Fidelity Insurance Assessors</li>
+            <li><strong>Country:</strong> Republic of Malawi</li>
+            <li><strong>Email:</strong> <a href="mailto:info@fidelityassessors.mw">info@fidelityassessors.mw</a></li>
+            <li><strong>DPO:</strong> <a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a></li>
+            <li><strong>Regulator:</strong> MACRA / Office of the Data Protection Commissioner, Malawi</li>
+          </ul>
+          <p>As a data controller, we are responsible for deciding how and why your personal data is used. We are registered as a data processor under the DPA 2024 and maintain an up-to-date Record of Processing Activities (RoPA) as required by Section 56 of the Act.</p>
+        </div>
+      </div>
+
+      <!-- 2. What We Collect -->
+      <div class="pp-section" id="s2">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">📋</span>
+          <span class="pp-sec-title">2. What Personal Data We Collect</span>
+        </div>
+        <div class="pp-sec-body">
+          <h4>Account Registration Data</h4>
+          <p>When you register an account on this platform, we collect:</p>
+          <ul>
+            <li><strong>Organization name</strong> — to identify your company in audit reports</li>
+            <li><strong>Industry sector</strong> — to tailor compliance guidance to your sector's obligations</li>
+            <li><strong>Organization size</strong> — to apply relevant thresholds under the DPA 2024</li>
+            <li><strong>Contact person name</strong> — the primary representative for compliance correspondence</li>
+            <li><strong>Email address</strong> — used as your login identifier and for service communications</li>
+            <li><strong>Password</strong> — stored in hashed form; we never store your plain text password</li>
+          </ul>
+
+          <h4>Audit and Assessment Data</h4>
+          <p>When you complete compliance audits, we store:</p>
+          <ul>
+            <li>Your answers to each audit question (Yes / Partial / No / N/A)</li>
+            <li>Section notes you enter during the audit</li>
+            <li>Calculated compliance scores and grade results</li>
+            <li>Audit timestamps (when the audit was started and last updated)</li>
+          </ul>
+
+          <h4>Usage and Activity Data</h4>
+          <ul>
+            <li>Platform activity log: login events, audit completions, report generations</li>
+            <li>Browser session data (stored locally in your browser's localStorage — not transmitted to our servers in the current version)</li>
+          </ul>
+
+          <h4>Data We Do NOT Collect</h4>
+          <ul>
+            <li>We do not collect payment card numbers or banking information on this platform</li>
+            <li>We do not collect biometric data, health data, or any special categories of personal data</li>
+            <li>We do not use tracking cookies, advertising pixels, or third-party analytics</li>
+            <li>We do not collect data about individuals within your organization beyond the primary contact</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 3. Why We Process -->
+      <div class="pp-section" id="s3">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🎯</span>
+          <span class="pp-sec-title">3. Why We Process Your Data (Purposes)</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>We process your personal data only for the following specific, explicit, and legitimate purposes in accordance with Section 23 of the DPA 2024 (Purpose Limitation):</p>
+          <ul>
+            <li><strong>Service Delivery:</strong> To create and manage your compliance audit account, save your audit progress, and generate your compliance reports and grades.</li>
+            <li><strong>Authentication and Security:</strong> To verify your identity when you log in and protect your account from unauthorized access.</li>
+            <li><strong>Compliance Assessment:</strong> To process your audit answers against the DPA 2024 checklist to calculate your compliance score and generate recommendations.</li>
+            <li><strong>Service Communications:</strong> To send you important service notifications, including password reset requests, if you request them.</li>
+            <li><strong>Legal Compliance:</strong> To meet our own obligations under the Malawi Data Protection Act 2024 and respond to lawful requests from MACRA or the Data Protection Commissioner.</li>
+            <li><strong>Service Improvement:</strong> To analyse aggregated, anonymised usage patterns to improve the platform (where this does not identify individual users).</li>
+          </ul>
+          <p>We will <strong>never</strong> use your data for profiling, automated decision-making that produces legal effects, marketing without your explicit consent, or any purpose not listed above.</p>
+        </div>
+      </div>
+
+      <!-- 4. Lawful Basis -->
+      <div class="pp-section" id="s4">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">⚖️</span>
+          <span class="pp-sec-title">4. Lawful Basis for Processing</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>Under Section 26 of the DPA 2024, we must have a lawful basis for processing your personal data. We rely on the following:</p>
+
+          <h4>Contractual Necessity (Section 26(1)(b))</h4>
+          <p>Processing your registration data, audit data, and account information is <strong>necessary to perform the service contract</strong> you enter when creating an account. Without this data, we cannot provide the compliance audit service you have signed up for.</p>
+
+          <h4>Consent (Section 26(1)(a))</h4>
+          <p>You gave <strong>explicit, informed consent</strong> at registration by checking the agreement box that references this Privacy Policy and our Terms of Service. Your consent covers storage of your data in our system and use for the purposes described in Section 3 above.</p>
+          <p>You may <strong>withdraw your consent</strong> at any time by deleting your account from the Profile page in your dashboard, or by emailing <a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a>.</p>
+
+          <h4>Legal Obligation (Section 26(1)(c))</h4>
+          <p>In limited circumstances, we may be required to process or retain data to comply with a <strong>legal obligation</strong> — for example, responding to a lawful order from MACRA or a Malawian court.</p>
+
+          <h4>Legitimate Interests (Section 26(1)(f))</h4>
+          <p>We process anonymised, aggregated usage data on the basis of our <strong>legitimate interest</strong> in improving the platform, where this does not override your rights and freedoms.</p>
+        </div>
+      </div>
+
+      <!-- 5. Retention -->
+      <div class="pp-section" id="s5">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🗓️</span>
+          <span class="pp-sec-title">5. How Long We Keep Your Data</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>In accordance with the <strong>Storage Limitation</strong> principle (Section 22 of the DPA 2024), we retain personal data only for as long as necessary for the purpose for which it was collected. Our data retention schedule is:</p>
+
+          <table class="retention-table">
+            <thead>
+              <tr>
+                <th>Data Category</th>
+                <th>Retention Period</th>
+                <th>Basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Account registration data</strong><br><small>(name, email, org details)</small></td>
+                <td>Duration of active account + 12 months after closure</td>
+                <td>Contract performance; legal obligation</td>
+              </tr>
+              <tr>
+                <td><strong>Audit responses and scores</strong></td>
+                <td>Duration of active account + 24 months after closure</td>
+                <td>Contract performance; regulatory audit trail</td>
+              </tr>
+              <tr>
+                <td><strong>Activity logs</strong></td>
+                <td>12 months rolling</td>
+                <td>Security; service integrity</td>
+              </tr>
+              <tr>
+                <td><strong>Printed / exported reports</strong></td>
+                <td>Not stored by us — generated locally in your browser</td>
+                <td>N/A (client-side only)</td>
+              </tr>
+              <tr>
+                <td><strong>Compliance correspondence</strong></td>
+                <td>7 years</td>
+                <td>Legal obligation under Malawian commercial law</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="margin-top:16px">When data reaches the end of its retention period, it is permanently and irreversibly deleted from our systems. We do not archive or anonymise in place as a substitute for deletion.</p>
+        </div>
+      </div>
+
+      <!-- 6. Sharing -->
+      <div class="pp-section" id="s6">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🤝</span>
+          <span class="pp-sec-title">6. Who We Share Your Data With</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>We do <strong>not sell, rent, or trade</strong> your personal data to any third party. We share your data only in the following limited and documented circumstances:</p>
+
+          <h4>Within Fidelity</h4>
+          <p>Access to your data is restricted to staff members who need it to deliver the compliance audit service. All staff handling personal data are trained in DPA 2024 obligations and are bound by confidentiality agreements.</p>
+
+          <h4>MACRA and Regulatory Authorities</h4>
+          <p>We may share data with the Malawi Communications Regulatory Authority (MACRA) or the Data Protection Commissioner if required by law or in connection with a regulatory investigation. We will notify you where legally permissible before making such a disclosure.</p>
+
+          <h4>Service Providers (Data Processors)</h4>
+          <p>Where we use third-party service providers who process data on our behalf (for example, cloud hosting providers), we ensure that:</p>
+          <ul>
+            <li>A written Data Processing Agreement (DPA) is in place as required by Section 44 of the DPA 2024</li>
+            <li>The processor provides sufficient guarantees of technical and organisational security</li>
+            <li>Processing is limited strictly to purposes we direct</li>
+          </ul>
+
+          <h4>Legal Proceedings</h4>
+          <p>We may disclose data if required by a court order, warrant, or other binding legal process under Malawian law.</p>
+
+          <p>In all cases, we maintain a documented record of third-party data sharing as part of our Record of Processing Activities.</p>
+        </div>
+      </div>
+
+      <!-- 7. Your Rights -->
+      <div class="pp-section" id="s7">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🧑‍⚖️</span>
+          <span class="pp-sec-title">7. Your Data Subject Rights</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>Under the Malawi Data Protection Act 2024, you have the following rights regarding your personal data. These rights apply to all data subjects whose data we process.</p>
+
+          <div class="rights-grid">
+            <div class="right-card">
+              <div class="right-card-icon">👁️</div>
+              <div class="right-card-title">Right of Access (s.30)</div>
+              <div class="right-card-text">Request a copy of all personal data we hold about you and information about how it is processed.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">✏️</div>
+              <div class="right-card-title">Right to Rectification (s.31)</div>
+              <div class="right-card-text">Request correction of inaccurate or incomplete personal data. Update your profile directly in your dashboard.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">🗑️</div>
+              <div class="right-card-title">Right to Erasure (s.32)</div>
+              <div class="right-card-text">Request deletion of your personal data when it is no longer necessary for the purpose it was collected, or when you withdraw consent.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">⏸️</div>
+              <div class="right-card-title">Right to Restriction (s.33)</div>
+              <div class="right-card-text">Request that we restrict processing of your data while a dispute about accuracy or lawfulness is resolved.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">📦</div>
+              <div class="right-card-title">Right to Portability (s.34)</div>
+              <div class="right-card-text">Receive your personal data in a structured, machine-readable format to transfer to another service provider.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">🚫</div>
+              <div class="right-card-title">Right to Object (s.35)</div>
+              <div class="right-card-text">Object to processing based on legitimate interests. We will stop unless we have compelling legitimate grounds that override your interests.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">🤖</div>
+              <div class="right-card-title">Automated Decisions (s.38)</div>
+              <div class="right-card-text">The right not to be subject to purely automated decisions that have significant legal effects on you. We do not engage in such processing.</div>
+            </div>
+            <div class="right-card">
+              <div class="right-card-icon">↩️</div>
+              <div class="right-card-title">Withdraw Consent (s.27)</div>
+              <div class="right-card-text">Withdraw consent at any time without affecting the lawfulness of processing before withdrawal. Delete your account or contact our DPO.</div>
+            </div>
+          </div>
+
+          <h4 style="margin-top:20px">How to Exercise Your Rights</h4>
+          <p>Most rights can be exercised directly from your <strong>dashboard Profile page</strong>, where you can update your information, download your data, or delete your account.</p>
+          <p>For requests that cannot be fulfilled through the platform, email our Data Protection Officer at <a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a> with the subject line <em>"Data Subject Request"</em>. We will respond within <strong>30 calendar days</strong> in accordance with Section 30(3) of the DPA 2024.</p>
+          <p>If you are not satisfied with our response, you have the right to lodge a complaint with the <strong>Office of the Data Protection Commissioner (MACRA), Malawi</strong>.</p>
+        </div>
+      </div>
+
+      <!-- 8. Security -->
+      <div class="pp-section" id="s8">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🔒</span>
+          <span class="pp-sec-title">8. Data Security</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>We implement appropriate technical and organisational measures to protect your personal data against accidental or unlawful destruction, loss, alteration, unauthorised disclosure, or access — as required by Section 46 of the DPA 2024.</p>
+
+          <h4>Technical Measures</h4>
+          <ul>
+            <li><strong>Password hashing:</strong> All user passwords are stored in irreversibly hashed form. Plain text passwords are never stored or logged.</li>
+            <li><strong>HTTPS encryption:</strong> All data in transit between your browser and our platform is encrypted using TLS.</li>
+            <li><strong>Access controls:</strong> User accounts are isolated. You can only access your own organization's audit data.</li>
+            <li><strong>Session management:</strong> Sessions are invalidated on logout. Authentication state is not persistently stored on the server.</li>
+          </ul>
+
+          <h4>Organisational Measures</h4>
+          <ul>
+            <li>Staff access to personal data is limited to those with a legitimate operational need</li>
+            <li>All staff handling personal data receive DPA 2024 compliance training</li>
+            <li>We maintain a Data Protection Impact Assessment (DPIA) for high-risk processing activities</li>
+            <li>Regular review of data security measures is conducted by our Data Protection Officer</li>
+          </ul>
+
+          <h4>Data Breach Notification</h4>
+          <p>In the event of a personal data breach that poses a risk to your rights and freedoms, we will:</p>
+          <ul>
+            <li>Notify MACRA / the Data Protection Commissioner within <strong>72 hours</strong> of becoming aware of the breach (Section 50, DPA 2024)</li>
+            <li>Notify affected data subjects without undue delay if the breach poses a <strong>high risk</strong> to their rights</li>
+            <li>Document the breach, its effects, and remedial actions taken in our breach register</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 9. Children -->
+      <div class="pp-section" id="s9">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">👶</span>
+          <span class="pp-sec-title">9. Children's Data</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>The Fidelity Compliance Platform is a <strong>business-to-business service</strong> designed exclusively for organizations and their designated representatives. We do not knowingly collect personal data from individuals under the age of 18.</p>
+          <p>Our registration form requires the user to be an authorized representative of a registered organization. By registering, you confirm that you are 18 years of age or older and have authority to bind your organization to these terms.</p>
+          <p>If we become aware that we have inadvertently collected personal data from a minor, we will delete that data promptly. Please contact <a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a> if you believe this has occurred.</p>
+        </div>
+      </div>
+
+      <!-- 10. International Transfers -->
+      <div class="pp-section" id="s10">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🌍</span>
+          <span class="pp-sec-title">10. International Data Transfers</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>In the current version of the platform, all data is stored locally in your browser's localStorage and is not transmitted to any external server. Data does not leave your device or jurisdiction without your action (for example, when you print or export a report).</p>
+          <p>In future versions where server-side storage is introduced, we will comply fully with Section 64–68 of the DPA 2024 governing cross-border data transfers. Specifically:</p>
+          <ul>
+            <li>We will only transfer data to countries with an <strong>adequate level of protection</strong> as determined by the Data Protection Commissioner, or</li>
+            <li>We will put in place <strong>appropriate safeguards</strong> (Standard Contractual Clauses or Binding Corporate Rules) before any international transfer</li>
+            <li>Any transfer to a country without adequate protection will only occur with your <strong>explicit consent</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 11. Policy Changes -->
+      <div class="pp-section" id="s11">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">🔄</span>
+          <span class="pp-sec-title">11. Changes to This Policy</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>We may update this Privacy Policy from time to time to reflect changes in our practices, the DPA 2024 regulatory guidance from MACRA, or operational changes to the platform.</p>
+          <p>When we make material changes, we will:</p>
+          <ul>
+            <li>Update the <strong>"Last Reviewed"</strong> date at the top of this page</li>
+            <li>Display a notice on the platform dashboard informing registered users of the change</li>
+            <li>Where changes significantly affect your rights, send a notification to the email address associated with your account</li>
+          </ul>
+          <p>Continued use of the platform after a policy update constitutes acceptance of the revised policy. If you do not agree with changes, you may delete your account at any time.</p>
+          <p>Older versions of this policy are retained on file and available on request from <a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a>.</p>
+        </div>
+      </div>
+
+      <!-- 12. Contact & DPO -->
+      <div class="pp-section" id="s12">
+        <div class="pp-sec-head">
+          <span class="pp-sec-icon">📬</span>
+          <span class="pp-sec-title">12. Contact Us &amp; Data Protection Officer</span>
+        </div>
+        <div class="pp-sec-body">
+          <p>If you have any questions about this Privacy Policy, wish to exercise your rights, or have a complaint about how we handle your personal data, please contact our Data Protection Officer.</p>
+          <p>As required by Section 41 of the DPA 2024, Fidelity Insurance Assessors has appointed a dedicated Data Protection Officer (DPO) who is responsible for overseeing our compliance with the Act.</p>
+
+          <div class="contact-box">
+            <div class="contact-box-title">📬 Data Protection Officer Contact</div>
+            <div class="contact-row">
+              <span class="contact-label">Name</span>
+              <span class="contact-val">Data Protection Officer<br>Fidelity Insurance Assessors</span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-label">Email</span>
+              <span class="contact-val"><a href="mailto:dpo@fidelityassessors.mw">dpo@fidelityassessors.mw</a></span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-label">Response</span>
+              <span class="contact-val">Within 30 calendar days as required by DPA 2024 s.30(3)</span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-label">Regulator</span>
+              <span class="contact-val">Office of the Data Protection Commissioner<br>Malawi Communications Regulatory Authority (MACRA)<br>P.O. Box 30224, Lilongwe 3, Malawi</span>
+            </div>
+          </div>
+
+          <p style="margin-top:16px">If you are not satisfied with our response to a data protection complaint, you have the right to escalate the matter to the <strong>Data Protection Commissioner at MACRA</strong> without any detriment to yourself.</p>
+        </div>
+      </div>
+
+    </div><!-- /.pp-body -->
+  </div><!-- /.pp-layout -->
+</div><!-- /.container -->
+
+<footer style="background:var(--navy);color:rgba(255,255,255,0.5);padding:24px;text-align:center;font-size:0.8rem;margin-top:40px">
+  Fidelity Insurance Assessors · Data Protection Compliance Division · Regulated by MACRA / DPA Malawi ·
+  <a href="terms.html" style="color:rgba(255,255,255,0.5)">Terms of Service</a>
+</footer>
+
+</body>
+</html>

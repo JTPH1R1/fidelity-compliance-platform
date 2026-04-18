@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In / Register — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+
+<nav class="auth-nav">
+  <a href="index.html" class="auth-nav-brand">
+    <div class="auth-nav-logo-wrap">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors">
+    </div>
+    <span class="auth-nav-name">DPA 2024 Compliance Platform</span>
+  </a>
+  <a href="index.html" class="auth-nav-back">← Back to Home</a>
+</nav>
+
+<div class="auth-container" id="auth-container">
+
+  <!-- Left Panel -->
+  <div class="auth-panel">
+    <div class="auth-panel-logo">
+      <div class="auth-logo-img-wrap">
+        <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors">
+      </div>
+      <div>
+        <div class="auth-logo-name">Insurance Assessors</div>
+        <div class="auth-logo-tag">Data Protection Compliance Division</div>
+      </div>
+    </div>
+    <div class="auth-panel-head">
+      <h2>Your compliance journey starts here.</h2>
+      <p>Join organizations across Malawi using our platform to achieve and maintain DPA 2024 compliance — and pass MACRA audits with confidence.</p>
+    </div>
+    <div class="auth-benefits">
+      <div class="auth-benefit">
+        <div class="benefit-icon">📋</div>
+        <div>
+          <div class="benefit-title">Comprehensive Audit Tool</div>
+          <div class="benefit-desc">65 questions across all 12 DPA 2024 compliance areas</div>
+        </div>
+      </div>
+      <div class="auth-benefit">
+        <div class="benefit-icon">📊</div>
+        <div>
+          <div class="benefit-title">Graded Reports</div>
+          <div class="benefit-desc">Instant scores, critical flags, and actionable recommendations</div>
+        </div>
+      </div>
+      <div class="auth-benefit">
+        <div class="benefit-icon">🖨️</div>
+        <div>
+          <div class="benefit-title">Printable MACRA Reports</div>
+          <div class="benefit-desc">Professional audit reports ready for regulatory review</div>
+        </div>
+      </div>
+      <div class="auth-benefit">
+        <div class="benefit-icon">🔐</div>
+        <div>
+          <div class="benefit-title">Secure &amp; DPA Compliant</div>
+          <div class="benefit-desc">Our platform is itself compliant with the DPA 2024</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-panel-dpa">
+      <p>
+        <strong>Your data is protected.</strong> Fidelity Compliance Platform processes your organization's data in accordance with
+        the <strong>Malawi Data Protection Act 2024</strong>. We only collect what we need, keep it secure, and never share it without
+        your consent. Read our <a href="privacy-policy.html" style="color:var(--gold)">Privacy Policy</a>.
+      </p>
+    </div>
+  </div>
+
+  <!-- Right Panel: Form -->
+  <div class="auth-form-panel">
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="Auth.showTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="Auth.showTab('signup')">Register</button>
+    </div>
+
+    <!-- ============================
+         LOGIN PANEL
+         ============================ -->
+    <div class="auth-panel-content active" id="panel-login">
+      <div>
+        <div class="auth-form-title">Welcome back</div>
+        <div class="auth-form-sub">Sign in to your organization's compliance dashboard.</div>
+      </div>
+
+      <div class="auth-message" id="login-message"></div>
+
+      <form id="login-form" onsubmit="Auth.login(event)">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="login-email" placeholder="you@organization.mw" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="password-wrap">
+            <input type="password" class="form-input" id="login-password" placeholder="Your password" required autocomplete="current-password">
+            <button type="button" class="password-toggle" onclick="Auth.togglePassword('login-password', this)">👁</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:-4px">
+          <label class="check-group">
+            <input type="checkbox" id="remember-me">
+            <span class="check-label">Remember me</span>
+          </label>
+          <a href="#" style="font-size:0.82rem;font-weight:600;color:var(--teal)">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-navy btn-full btn-lg" id="login-btn">
+          Sign In to Dashboard
+        </button>
+      </form>
+
+      <div style="text-align:center;font-size:0.82rem;color:var(--text-muted)">
+        Don't have an account?
+        <a href="#" onclick="Auth.showTab('signup');return false" style="color:var(--teal);font-weight:700">Register your organization →</a>
+      </div>
+    </div>
+
+    <!-- ============================
+         REGISTER PANEL
+         ============================ -->
+    <div class="auth-panel-content" id="panel-signup">
+      <div>
+        <div class="auth-form-title">Register Your Organization</div>
+        <div class="auth-form-sub">Create your compliance account. Free to start — no credit card required.</div>
+      </div>
+
+      <div class="auth-message" id="signup-message"></div>
+
+      <form id="signup-form" onsubmit="Auth.register(event)">
+
+        <div class="form-group">
+          <label class="form-label">Organization Name <span class="req">*</span></label>
+          <input type="text" class="form-input" id="reg-orgname" placeholder="e.g. ABC Bank Limited" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Sector <span class="req">*</span></label>
+            <select class="form-select" id="reg-sector" required>
+              <option value="">— Select —</option>
+              <option>Banking &amp; Financial Services</option>
+              <option>Insurance</option>
+              <option>Healthcare / Medical</option>
+              <option>Education</option>
+              <option>Telecommunications</option>
+              <option>Government / Public Sector</option>
+              <option>NGO / INGO</option>
+              <option>Retail &amp; Commerce</option>
+              <option>Manufacturing</option>
+              <option>Legal Services</option>
+              <option>Real Estate &amp; Property</option>
+              <option>Agriculture</option>
+              <option>Media &amp; Communications</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Organization Size</label>
+            <select class="form-select" id="reg-size">
+              <option value="">— Select —</option>
+              <option>Micro (1–10)</option>
+              <option>Small (11–50)</option>
+              <option>Medium (51–250)</option>
+              <option>Large (251–1,000)</option>
+              <option>Enterprise (1,000+)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Your Full Name <span class="req">*</span></label>
+          <input type="text" class="form-input" id="reg-name" placeholder="First and last name" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Email <span class="req">*</span></label>
+          <input type="email" class="form-input" id="reg-email" placeholder="you@organization.mw" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password <span class="req">*</span></label>
+          <div class="password-wrap">
+            <input type="password" class="form-input" id="reg-password" placeholder="Minimum 8 characters" required minlength="8"
+              oninput="Auth.checkPasswordStrength(this.value)">
+            <button type="button" class="password-toggle" onclick="Auth.togglePassword('reg-password', this)">👁</button>
+          </div>
+          <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+          <div class="strength-label" id="strength-label"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password <span class="req">*</span></label>
+          <div class="password-wrap">
+            <input type="password" class="form-input" id="reg-password2" placeholder="Repeat password" required>
+            <button type="button" class="password-toggle" onclick="Auth.togglePassword('reg-password2', this)">👁</button>
+          </div>
+        </div>
+
+        <label class="check-group">
+          <input type="checkbox" id="reg-terms" required>
+          <span class="check-label">
+            I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and
+            <a href="privacy-policy.html" target="_blank">Privacy Policy</a>.
+            I consent to Fidelity Compliance Platform processing my organization's data
+            in accordance with the Malawi Data Protection Act 2024.
+          </span>
+        </label>
+
+        <button type="submit" class="btn btn-navy btn-full btn-lg" id="signup-btn">
+          Create Account &amp; Start Audit →
+        </button>
+
+      </form>
+
+      <div style="text-align:center;font-size:0.82rem;color:var(--text-muted)">
+        Already registered?
+        <a href="#" onclick="Auth.showTab('login');return false" style="color:var(--teal);font-weight:700">Sign in →</a>
+      </div>
+    </div>
+
+  </div><!-- /auth-form-panel -->
+</div><!-- /auth-container -->
+
+<!-- DPA Notice -->
+<div style="text-align:center;margin-top:20px;font-size:0.75rem;color:rgba(255,255,255,0.4);max-width:480px;line-height:1.6">
+  Protected by the Malawi Data Protection Act 2024 &nbsp;·&nbsp;
+  <a href="privacy-policy.html" style="color:rgba(255,255,255,0.5)">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="mailto:dpo@fidelityassessors.mw" style="color:rgba(255,255,255,0.5)">Contact DPO</a>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

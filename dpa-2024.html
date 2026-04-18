@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DPA 2024 Guide — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    body { background: var(--bg); }
+    .dpa-nav { background: var(--navy); position: sticky; top: 0; z-index: 100; padding: 14px 28px; display: flex; align-items: center; gap: 16px; }
+    .dpa-nav a { color: rgba(255,255,255,0.7); font-size: 0.87rem; }
+    .dpa-nav a:hover { color: #fff; }
+    .dpa-nav-logo { display: flex; align-items: center; gap: 10px; }
+.dpa-nav-name { font-weight: 800; color: #fff; font-size: 0.9rem; }
+    .dpa-hero { background: linear-gradient(135deg, var(--navy) 0%, #1a3c7a 100%); padding: 48px 0 40px; }
+    .dpa-hero h1 { color: #fff; font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 10px; }
+    .dpa-hero p  { color: rgba(255,255,255,0.7); font-size: 1rem; line-height: 1.7; max-width: 560px; }
+    .dpa-layout { display: grid; grid-template-columns: 240px 1fr; gap: 32px; padding: 40px 0 60px; }
+    .dpa-toc { position: sticky; top: 70px; align-self: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .dpa-toc-title { padding: 14px 16px; font-size: 0.78rem; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); background: var(--gray-50); }
+    .dpa-toc-links { display: flex; flex-direction: column; padding: 8px 0; }
+    .dpa-toc-link { padding: 7px 16px; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; transition: all 0.15s; cursor: pointer; display: flex; align-items: center; gap: 8px; border-left: 3px solid transparent; }
+    .dpa-toc-link:hover { color: var(--navy); background: var(--gray-50); border-left-color: var(--border); }
+    .dpa-toc-link.active { color: var(--navy); background: #e8eef5; border-left-color: var(--navy); }
+    .dpa-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 20px; }
+    .dpa-sec-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; gap: 14px; align-items: center; cursor: pointer; }
+    .dpa-sec-head:hover { background: var(--gray-50); }
+    .dpa-sec-icon { font-size: 1.8rem; }
+    .dpa-sec-num  { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .dpa-sec-title { font-size: 1.1rem; font-weight: 800; color: var(--navy); }
+    .dpa-sec-ref  { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+    .dpa-sec-body { padding: 22px 24px; display: none; }
+    .dpa-sec-body.open { display: block; }
+    .law-quote { background: var(--gray-50); border-left: 4px solid var(--navy-light); padding: 14px 18px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.88rem; color: #3a4a5c; font-style: italic; line-height: 1.75; margin-bottom: 20px; }
+    .law-quote-label { font-size: 0.7rem; font-weight: 800; color: var(--navy-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .plain-label { font-size: 0.7rem; font-weight: 800; color: var(--teal); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .plain-text  { font-size: 0.91rem; color: var(--text-soft); line-height: 1.78; }
+    .plain-text strong { color: var(--navy); }
+    .obligation-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .obl-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; background: var(--gray-50); border-radius: var(--radius-sm); border-left: 3px solid var(--teal); }
+    .obl-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .obl-text  { font-size: 0.87rem; color: var(--text-soft); line-height: 1.55; }
+    .obl-text strong { color: var(--navy); }
+    @media (max-width: 768px) { .dpa-layout { grid-template-columns: 1fr; } .dpa-toc { position: static; } }
+  </style>
+</head>
+<body>
+
+<nav class="dpa-nav">
+  <div class="dpa-nav-logo">
+    <div style="background:#fff;border-radius:7px;padding:5px 11px;display:flex;align-items:center">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" style="height:28px;width:auto;display:block">
+    </div>
+    <span class="dpa-nav-name">Insurance Assessors</span>
+  </div>
+  <div style="flex:1"></div>
+  <a href="dashboard.html">← Dashboard</a>
+  <a href="index.html" style="margin-left:8px">Home</a>
+</nav>
+
+<div class="dpa-hero">
+  <div class="container">
+    <div style="margin-bottom:12px"><span style="background:rgba(244,166,32,0.15);border:1px solid rgba(244,166,32,0.3);color:var(--gold);font-size:0.75rem;font-weight:700;padding:5px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px">In Force: 3 June 2024</span></div>
+    <h1>Malawi Data Protection Act 2024</h1>
+    <p>The complete guide to your obligations — official Act text alongside plain English explanations for all 12 compliance areas. Use this guide alongside the audit tool to understand exactly what is required of your organization.</p>
+    <div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">
+      <a href="https://macra.mw/wpfd_file/data-protection-act-2024/" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Download Official Act ↗</a>
+      <a href="audit.html" class="btn btn-outline-white btn-sm">Start Compliance Audit →</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="dpa-layout">
+
+    <!-- Table of Contents -->
+    <div class="dpa-toc">
+      <div class="dpa-toc-title">Contents</div>
+      <div class="dpa-toc-links" id="toc-links">
+        <div class="dpa-toc-link" onclick="scrollToSection('s1')">📋 Registration</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s2')">⚖️ Principles</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s3')">📝 Lawful Basis</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s4')">🧑‍⚖️ Data Rights</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s5')">👤 DPO</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s6')">🔍 DPIA</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s7')">🗂️ RoPA</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s8')">🔒 Security</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s9')">🚨 Breach</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s10')">🤝 Processors</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s11')">🌍 Transfers</div>
+        <div class="dpa-toc-link" onclick="scrollToSection('s12')">👶 Children</div>
+      </div>
+    </div>
+
+    <!-- Sections -->
+    <div id="dpa-sections"><!-- Rendered by JS --></div>
+
+  </div>
+</div>
+
+<footer style="background:var(--navy);color:rgba(255,255,255,0.5);padding:24px;text-align:center;font-size:0.8rem;margin-top:40px">
+  Fidelity Insurance Assessors · Data Protection Compliance Division · Based on the Malawi Data Protection Act 2024 · Regulated by MACRA / DPA Malawi
+</footer>
+
+<script src="js/main.js"></script>
+<script src="js/checklist-data.js"></script>
+<script>
+  function scrollToSection(id) {
+    const el = document.getElementById('sec-' + id);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); toggleSection('sec-' + id, true); }
+  }
+  function toggleSection(id, forceOpen) {
+    const body = document.getElementById(id + '-body');
+    if (!body) return;
+    if (forceOpen) body.classList.add('open');
+    else body.classList.toggle('open');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('dpa-sections');
+    if (!container || typeof CHECKLIST_DATA === 'undefined') return;
+
+    container.innerHTML = CHECKLIST_DATA.sections.map(sec => `
+      <div class="dpa-section" id="sec-${sec.id}">
+        <div class="dpa-sec-head" onclick="toggleSection('sec-${sec.id}')">
+          <span class="dpa-sec-icon">${sec.icon}</span>
+          <div>
+            <div class="dpa-sec-num">Section ${sec.number} of 12 &nbsp;·&nbsp; Weight: ${sec.weight}%</div>
+            <div class="dpa-sec-title">${sec.title}</div>
+            <div class="dpa-sec-ref">${sec.actRef}</div>
+          </div>
+          <span style="margin-left:auto;color:var(--text-muted);font-size:0.8rem">▾</span>
+        </div>
+        <div class="dpa-sec-body" id="sec-${sec.id}-body">
+          <div class="law-quote-label">⚖️ What the Law Says</div>
+          <div class="law-quote">"${sec.lawText}"</div>
+          <div class="plain-label">📖 Plain English Explanation</div>
+          <div class="plain-text">${sec.explanation.replace(/\n/g,'<br>')}</div>
+          <div class="obligation-list">
+            ${sec.items.map((item,i) => `
+              <div class="obl-item">
+                <span class="obl-icon">${item.critical ? '⚠️' : '✓'}</span>
+                <div class="obl-text">
+                  <strong>${item.critical ? '[CRITICAL] ' : ''}Q${i+1}:</strong> ${item.question}
+                  <div style="font-size:0.78rem;color:var(--text-muted);margin-top:3px">${item.actClause} · ${item.hint}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div style="margin-top:20px">
+            <a href="audit.html" class="btn btn-teal btn-sm">Assess This Section in the Audit Tool →</a>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Open first section by default
+    const firstBody = document.getElementById('sec-s1-body');
+    if (firstBody) firstBody.classList.add('open');
+  });
+</script>
+</body>
+</html>

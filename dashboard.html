@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<!-- =========================================================
+     TOP NAV
+     ========================================================= -->
+<nav class="topnav" id="topnav">
+  <div class="topnav-inner">
+    <a href="dashboard.html" class="topnav-brand">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" class="topnav-logo-img">
+      <div class="topnav-brand-divider"></div>
+      <div>
+        <div class="topnav-name">Insurance Assessors</div>
+        <div class="topnav-tagline">DPA 2024 Compliance Platform</div>
+      </div>
+    </a>
+    <div class="topnav-nav">
+      <a href="dashboard.html" class="topnav-link active">🏠 Dashboard</a>
+      <a href="audit.html" class="topnav-link">📋 Start Audit</a>
+      <a href="dpa-2024.html" class="topnav-link">⚖️ DPA 2024</a>
+      <a href="privacy-policy.html" class="topnav-link">🔒 Privacy Policy</a>
+    </div>
+    <div class="topnav-spacer"></div>
+    <div class="topnav-actions">
+      <div class="topnav-user" onclick="Dashboard.showProfileMenu()">
+        <div class="topnav-avatar" id="nav-avatar">?</div>
+        <span class="topnav-user-name" id="nav-username">Loading...</span>
+        <span style="font-size:0.7rem;color:var(--text-muted)">▾</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- =========================================================
+     APP LAYOUT
+     ========================================================= -->
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="app-sidebar" id="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-logo">
+        <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors">
+      </div>
+      <div class="sidebar-brand-tag">Compliance Platform</div>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Main</span>
+      <button class="sidebar-link active" onclick="Dashboard.showPage('overview')">
+        <span class="s-icon">🏠</span> Overview
+      </button>
+      <button class="sidebar-link" onclick="Dashboard.showPage('audit')">
+        <span class="s-icon">📋</span> Run Audit
+        <span class="s-badge">NEW</span>
+      </button>
+      <button class="sidebar-link" onclick="Dashboard.showPage('reports')">
+        <span class="s-icon">📊</span> Reports &amp; History
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Compliance</span>
+      <button class="sidebar-link" onclick="Dashboard.showPage('dpa')">
+        <span class="s-icon">⚖️</span> DPA 2024 Guide
+      </button>
+      <button class="sidebar-link" onclick="Dashboard.showPage('flags')">
+        <span class="s-icon">🚨</span> Critical Flags
+      </button>
+      <button class="sidebar-link" onclick="Dashboard.showPage('deadlines')">
+        <span class="s-icon">⏰</span> Deadlines
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <span class="sidebar-section-title">Account</span>
+      <button class="sidebar-link" onclick="Dashboard.showPage('profile')">
+        <span class="s-icon">🏢</span> Company Profile
+      </button>
+      <button class="sidebar-link" onclick="Dashboard.showPage('privacy')">
+        <span class="s-icon">🔒</span> Our Privacy Policy
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-company" id="sidebar-company">
+        <div class="sidebar-company-logo" id="sidebar-logo">F</div>
+        <div>
+          <div class="sidebar-company-name" id="sidebar-name">Organization</div>
+          <div class="sidebar-company-plan">Free Plan</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="app-main">
+
+    <!-- ======================================
+         PAGE: OVERVIEW (Dashboard)
+         ====================================== -->
+    <div id="page-overview" class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="welcome-title">Good day, Welcome!</div>
+          <div class="page-sub">Your DPA 2024 compliance overview — <span id="today-date"></span></div>
+        </div>
+        <a href="audit.html" class="btn btn-teal">📋 Start / Continue Audit</a>
+      </div>
+      <div class="page-body">
+
+        <!-- Compliance deadline banner -->
+        <div class="compliance-banner" id="compliance-banner" style="display:none">
+          <span class="compliance-banner-icon">⚠️</span>
+          <div class="compliance-banner-text">
+            <strong>Compliance Deadline Approaching!</strong>
+            The DPA 2024 compliance deadline for your organization may be approaching.
+            Complete your audit and implement recommendations to avoid MACRA enforcement action.
+          </div>
+          <a href="audit.html" class="btn btn-sm" style="background:#fff;color:var(--warning);border-color:#fff;flex-shrink:0">Take Audit Now</a>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card grade-card">
+            <div class="stat-card-icon" id="grade-icon">📊</div>
+            <div class="stat-card-label">Compliance Grade</div>
+            <div class="stat-card-value" id="stat-grade">—</div>
+            <div class="stat-card-sub" id="stat-grade-sub">No audit yet</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">💯</div>
+            <div class="stat-card-label">Overall Score</div>
+            <div class="stat-card-value" id="stat-score">—</div>
+            <div class="stat-card-sub" id="stat-score-sub">Start audit to see score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">🚨</div>
+            <div class="stat-card-label">Critical Flags</div>
+            <div class="stat-card-value" id="stat-flags">—</div>
+            <div class="stat-card-sub" id="stat-flags-sub">High-priority gaps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">✅</div>
+            <div class="stat-card-label">Questions Answered</div>
+            <div class="stat-card-value" id="stat-answered">—</div>
+            <div class="stat-card-sub" id="stat-answered-sub">of 65 total questions</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+
+          <!-- Audit Status Widget -->
+          <div class="audit-widget">
+            <div class="audit-widget-head">
+              <span class="audit-widget-title">📊 Latest Audit Status</span>
+              <a href="audit.html" class="btn btn-teal btn-sm">Open Audit</a>
+            </div>
+            <div class="audit-widget-body" id="audit-widget-body">
+              <div class="no-audit-state">
+                <div class="no-audit-icon">📋</div>
+                <div class="no-audit-title">No Audit Completed Yet</div>
+                <div class="no-audit-desc">Start your first compliance audit to see your grade, score, and section breakdown here.</div>
+                <a href="audit.html" class="btn btn-navy">Start Your First Audit →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Critical Flags Widget -->
+          <div class="flags-widget">
+            <div class="audit-widget-head">
+              <span class="audit-widget-title">🚨 Critical Compliance Flags</span>
+              <span class="badge badge-danger" id="flags-count-badge" style="display:none">0</span>
+            </div>
+            <div id="flags-widget-body">
+              <div class="flags-empty">Complete an audit to see critical flags here.</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="audit-widget">
+            <div class="audit-widget-head">
+              <span class="audit-widget-title">⚡ Quick Actions</span>
+            </div>
+            <div class="audit-widget-body">
+              <div class="quick-actions">
+                <a href="audit.html" class="qa-btn primary">
+                  <span class="qa-icon">📋</span>
+                  <div>
+                    <div class="qa-label">Run Compliance Audit</div>
+                    <div class="qa-desc">Answer 65 questions across 12 areas</div>
+                  </div>
+                </a>
+                <button class="qa-btn" onclick="Dashboard.printReport()">
+                  <span class="qa-icon">🖨️</span>
+                  <div>
+                    <div class="qa-label">Print Audit Report</div>
+                    <div class="qa-desc">MACRA-ready PDF report</div>
+                  </div>
+                </button>
+                <a href="dpa-2024.html" class="qa-btn">
+                  <span class="qa-icon">⚖️</span>
+                  <div>
+                    <div class="qa-label">Read DPA 2024 Guide</div>
+                    <div class="qa-desc">Act text + plain English</div>
+                  </div>
+                </a>
+                <button class="qa-btn" onclick="Dashboard.showPage('profile')">
+                  <span class="qa-icon">🏢</span>
+                  <div>
+                    <div class="qa-label">Update Company Profile</div>
+                    <div class="qa-desc">Edit organization details</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="activity-widget">
+            <div class="audit-widget-head">
+              <span class="audit-widget-title">🕐 Recent Activity</span>
+            </div>
+            <div id="activity-list">
+              <div class="activity-empty">No activity recorded yet.</div>
+            </div>
+          </div>
+
+        </div><!-- /dashboard-grid -->
+
+        <!-- Company Profile Summary -->
+        <div class="profile-widget">
+          <div class="profile-widget-head">
+            <div class="profile-avatar" id="profile-avatar">?</div>
+            <div>
+              <div class="profile-org-name" id="profile-org-name">Organization Name</div>
+              <div class="profile-org-sector" id="profile-org-sector">Sector — Size</div>
+            </div>
+          </div>
+          <div class="profile-widget-body" id="profile-widget-body">
+            <div class="profile-detail-row">
+              <span class="profile-detail-icon">👤</span>
+              <span class="profile-detail-label">Contact</span>
+              <span class="profile-detail-value" id="prof-contact">—</span>
+            </div>
+            <div class="profile-detail-row">
+              <span class="profile-detail-icon">📧</span>
+              <span class="profile-detail-label">Email</span>
+              <span class="profile-detail-value" id="prof-email">—</span>
+            </div>
+            <div class="profile-detail-row">
+              <span class="profile-detail-icon">📅</span>
+              <span class="profile-detail-label">Registered</span>
+              <span class="profile-detail-value" id="prof-registered">—</span>
+            </div>
+            <div class="profile-detail-row">
+              <span class="profile-detail-icon">📋</span>
+              <span class="profile-detail-label">Last Audit</span>
+              <span class="profile-detail-value" id="prof-last-audit">Not yet audited</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-body -->
+    </div><!-- /page-overview -->
+
+    <!-- ======================================
+         PAGE: PROFILE
+         ====================================== -->
+    <div id="page-profile" class="page-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Company Profile</div>
+          <div class="page-sub">Manage your organization's details used in audit reports</div>
+        </div>
+        <button class="btn btn-teal" onclick="Dashboard.saveProfile()">Save Changes</button>
+      </div>
+      <div class="page-body">
+        <div class="card" style="max-width:700px">
+          <div class="card-head"><span class="card-title">🏢 Organization Details</span></div>
+          <div class="card-body">
+            <div class="form-grid-2">
+              <div class="form-group span-full">
+                <label class="form-label">Organization Name</label>
+                <input type="text" class="form-input" id="edit-orgname">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sector / Industry</label>
+                <select class="form-select" id="edit-sector">
+                  <option value="">— Select —</option>
+                  <option>Banking &amp; Financial Services</option>
+                  <option>Insurance</option>
+                  <option>Healthcare / Medical</option>
+                  <option>Education</option>
+                  <option>Telecommunications</option>
+                  <option>Government / Public Sector</option>
+                  <option>NGO / INGO</option>
+                  <option>Retail &amp; Commerce</option>
+                  <option>Manufacturing</option>
+                  <option>Legal Services</option>
+                  <option>Real Estate &amp; Property</option>
+                  <option>Agriculture</option>
+                  <option>Media &amp; Communications</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Organization Size</label>
+                <select class="form-select" id="edit-size">
+                  <option value="">— Select —</option>
+                  <option>Micro (1–10)</option>
+                  <option>Small (11–50)</option>
+                  <option>Medium (51–250)</option>
+                  <option>Large (251–1,000)</option>
+                  <option>Enterprise (1,000+)</option>
+                </select>
+              </div>
+              <div class="form-group span-full">
+                <label class="form-label">Physical Address</label>
+                <input type="text" class="form-input" id="edit-address">
+              </div>
+            </div>
+          </div>
+          <div class="card-head" style="border-top:1px solid var(--border)"><span class="card-title">👤 Primary Contact</span></div>
+          <div class="card-body">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-input" id="edit-contact-name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role / Title</label>
+                <input type="text" class="form-input" id="edit-contact-role" placeholder="e.g. Compliance Officer">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="edit-contact-email">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-input" id="edit-contact-phone">
+              </div>
+            </div>
+          </div>
+          <div class="card-foot" style="display:flex;justify-content:flex-end;gap:10px">
+            <button class="btn btn-ghost" onclick="Dashboard.showPage('overview')">Cancel</button>
+            <button class="btn btn-teal" onclick="Dashboard.saveProfile()">Save Changes</button>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:700px;margin-top:20px">
+          <div class="card-head"><span class="card-title">⚠️ Account Actions</span></div>
+          <div class="card-body">
+            <div class="alert alert-warning">
+              <span class="alert-icon">⚠️</span>
+              <div class="alert-body">
+                <div class="alert-title">Data Deletion</div>
+                <div class="alert-text">You have the right to request deletion of your organization's data under the Malawi Data Protection Act 2024. Deleting your account will permanently remove all audit records and company data.</div>
+              </div>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn btn-danger btn-sm" onclick="Dashboard.confirmDeleteAccount()">Request Account &amp; Data Deletion</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================
+         PAGE: REPORTS
+         ====================================== -->
+    <div id="page-reports" class="page-content hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reports &amp; Audit History</div>
+          <div class="page-sub">Review past compliance audits and download reports</div>
+        </div>
+        <button class="btn btn-teal" onclick="window.print()">🖨️ Print Latest Report</button>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="card-head"><span class="card-title">📅 Audit History</span></div>
+          <div id="audit-history-body">
+            <div style="padding:32px;text-align:center;color:var(--text-muted)">
+              No completed audits yet. <a href="audit.html">Start your first audit →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================
+         PAGE: DEADLINES
+         ====================================== -->
+    <div id="page-deadlines" class="page-content hidden">
+      <div class="page-header">
+        <div class="page-title">Compliance Deadlines</div>
+        <div class="page-sub">Key dates under the Malawi Data Protection Act 2024</div>
+      </div>
+      <div class="page-body">
+        <div class="card" style="max-width:700px">
+          <div class="card-head"><span class="card-title">⏰ Important Dates</span></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div class="alert alert-danger">
+                <span class="alert-icon">🚨</span>
+                <div class="alert-body">
+                  <div class="alert-title">December 2024 — Major Importance Deadline (PASSED)</div>
+                  <div class="alert-text">Organizations of major importance (banks, telecoms, hospitals, government) must have been fully compliant by December 2024 (6 months from commencement). If this applies to your organization, you are already at risk of enforcement action.</div>
+                </div>
+              </div>
+              <div class="alert alert-warning">
+                <span class="alert-icon">⚠️</span>
+                <div class="alert-body">
+                  <div class="alert-title">June 2026 — All Organizations Deadline</div>
+                  <div class="alert-text">All ordinary data controllers and processors must be fully compliant by June 2026 (2 years from commencement on 3 June 2024). Time to act is now — implementation takes months.</div>
+                </div>
+              </div>
+              <div class="alert alert-info">
+                <span class="alert-icon">⏱️</span>
+                <div class="alert-body">
+                  <div class="alert-title">72 Hours — Breach Notification Deadline (Ongoing)</div>
+                  <div class="alert-text">From the moment you discover a data breach, you have 72 hours to notify MACRA. This obligation is active NOW, regardless of your compliance deadline.</div>
+                </div>
+              </div>
+              <div class="alert alert-info">
+                <span class="alert-icon">📋</span>
+                <div class="alert-body">
+                  <div class="alert-title">Before Processing — DPIA Submission</div>
+                  <div class="alert-text">Data Protection Impact Assessments for high-risk activities must be submitted to MACRA BEFORE the processing activity begins. Retroactive DPIAs are not compliant.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- /app-main -->
+</div><!-- /app-layout -->
+
+<!-- Notification Toast -->
+<div id="toast" style="
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--navy);color:#fff;padding:14px 20px;border-radius:var(--radius);
+  box-shadow:var(--shadow-md);font-size:0.87rem;font-weight:600;
+  max-width:320px;transition:all 0.3s ease;transform:translateY(20px);opacity:0;pointer-events:none;
+" id="toast-msg">Saved!</div>
+
+<script src="js/main.js"></script>
+<script src="js/checklist-data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

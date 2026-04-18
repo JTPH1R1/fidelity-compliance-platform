@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compliance Audit — Fidelity Compliance Platform</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    /* Audit-specific overrides */
+    .audit-layout { display: flex; flex: 1; min-height: calc(100vh - var(--topbar-h)); }
+    .audit-sidebar {
+      width: 268px; flex-shrink: 0; background: var(--navy);
+      position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h));
+      overflow-y: auto; display: flex; flex-direction: column; padding: 16px;
+    }
+    .audit-sidebar-title { font-size: 0.7rem; font-weight: 800; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; padding: 4px 6px 8px; }
+    .audit-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-size: 0.82rem; color: rgba(255,255,255,0.55); border: none; background: none; text-align: left; width: 100%; font-family: var(--font); }
+    .audit-nav-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+    .audit-nav-item.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 600; }
+    .audit-nav-item.done { color: rgba(255,255,255,0.7); }
+    .ani-num { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; flex-shrink: 0; color: rgba(255,255,255,0.5); }
+    .audit-nav-item.active .ani-num { background: var(--gold); color: var(--navy); }
+    .audit-nav-item.done .ani-num { background: var(--teal); color: #fff; }
+    .ani-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ani-check { font-size: 0.7rem; color: var(--teal-light); margin-left: auto; }
+    .sidebar-progress-area { padding: 12px 6px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sp-row { display: flex; justify-content: space-between; font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+    .sp-bar { height: 5px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+    .sp-fill { height: 100%; background: var(--gold); border-radius: 10px; transition: width 0.3s; }
+    .sidebar-score-area { background: rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; text-align: center; margin-top: 8px; border: 1px solid rgba(255,255,255,0.08); }
+    .ssa-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.35); }
+    .ssa-score { font-size: 2rem; font-weight: 900; color: #fff; line-height: 1; }
+    .ssa-grade { font-size: 0.72rem; font-weight: 700; color: var(--gold); margin-top: 3px; }
+
+    /* Main audit content */
+    .audit-content { flex: 1; background: var(--bg); overflow-y: auto; }
+    .sec-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin: 24px 28px; box-shadow: var(--shadow-xs); overflow: hidden; }
+    .sec-card-head { padding: 22px 26px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 14px; align-items: flex-start; }
+    .sec-card-icon { font-size: 2rem; flex-shrink: 0; }
+    .sec-head-text { flex: 1; }
+    .sec-num-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .sec-title { font-size: 1.3rem; font-weight: 800; color: var(--navy); margin: 3px 0 8px; }
+    .sec-act-badge { display: inline-flex; align-items: center; gap: 5px; background: #e8eef5; color: var(--navy-light); font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; border: 1px solid #c5d5ee; }
+    .sec-score-area { text-align: right; flex-shrink: 0; }
+    .sec-score-num { font-size: 1.5rem; font-weight: 900; color: var(--navy); line-height: 1; }
+    .sec-score-lbl { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* Law accordion */
+    .law-acc-btn { width: 100%; background: var(--gray-50); border: none; padding: 12px 26px; text-align: left; cursor: pointer; font-family: var(--font); font-size: 0.83rem; font-weight: 700; color: var(--navy-light); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .law-acc-btn:hover { background: var(--gray-100); }
+    .law-acc-body { display: none; padding: 14px 26px; background: var(--gray-50); border-bottom: 1px solid var(--border); }
+    .law-acc-body.open { display: block; }
+    .law-text { font-size: 0.84rem; color: #3a4a5c; line-height: 1.8; font-style: italic; border-left: 4px solid var(--navy-light); padding-left: 14px; }
+
+    /* Explanation */
+    .sec-explain { padding: 18px 26px; background: #fafbfd; border-bottom: 1px solid var(--border); }
+    .explain-kicker { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--teal); margin-bottom: 8px; }
+    .explain-text { font-size: 0.89rem; color: var(--text-soft); line-height: 1.78; }
+    .explain-text strong { color: var(--navy); }
+
+    /* Questions */
+    .questions-area { padding: 18px 26px; display: flex; flex-direction: column; gap: 16px; }
+    .q-item { border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s; }
+    .q-item.ans-yes     { border-color: var(--teal); }
+    .q-item.ans-partial { border-color: var(--warning); }
+    .q-item.ans-no      { border-color: var(--danger); }
+    .q-item.ans-na      { border-color: var(--gray-200); opacity: 0.7; }
+    .q-head { padding: 13px 16px 10px; }
+    .q-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+    .q-num  { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); }
+    .q-flags { display: flex; gap: 6px; align-items: center; }
+    .q-crit-badge { font-size: 0.65rem; font-weight: 700; background: var(--danger-pale); color: var(--danger); border: 1px solid #ffcdd2; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
+    .q-act { font-size: 0.68rem; background: var(--gray-100); color: var(--text-muted); padding: 2px 8px; border-radius: 20px; }
+    .q-text { font-size: 0.96rem; font-weight: 600; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
+    .q-hint-btn { background: none; border: none; padding: 0; font-size: 0.76rem; color: var(--navy-light); cursor: pointer; font-family: var(--font); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .q-hint-btn:hover { text-decoration: underline; }
+    .q-hint-body { display: none; margin-top: 8px; padding: 10px 13px; background: #f0f4fa; border-radius: 6px; font-size: 0.82rem; color: #3a4a5c; line-height: 1.65; border-left: 3px solid var(--navy-light); }
+    .q-hint-body.open { display: block; }
+    .ans-bar { display: flex; border-top: 1px solid var(--border); }
+    .ans-btn { flex: 1; padding: 10px 6px; border: none; border-right: 1px solid var(--border); background: var(--gray-50); font-size: 0.78rem; font-weight: 700; font-family: var(--font); cursor: pointer; transition: all 0.12s; color: var(--text-muted); }
+    .ans-btn:last-child { border-right: none; }
+    .ans-btn:hover { background: var(--gray-100); }
+    .ans-btn.s-yes     { background: var(--success-light); color: var(--success); }
+    .ans-btn.s-partial { background: var(--warning-light); color: var(--warning); }
+    .ans-btn.s-no      { background: var(--danger-pale); color: var(--danger); }
+    .ans-btn.s-na      { background: var(--gray-100); color: var(--neutral); }
+
+    /* Notes */
+    .notes-area { padding: 0 26px 22px; }
+    .notes-lbl { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+    .notes-textarea { width: 100%; min-height: 72px; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 0.87rem; color: var(--text); resize: vertical; transition: border-color 0.15s; }
+    .notes-textarea:focus { outline: none; border-color: var(--navy-light); }
+
+    /* Nav bar */
+    .sec-nav-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 26px; border-top: 1px solid var(--border); background: var(--surface); }
+    .sec-nav-info { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="dashboard.html" class="topnav-brand">
+      <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" class="topnav-logo-img">
+      <div class="topnav-brand-divider"></div>
+      <div>
+        <div class="topnav-name">Insurance Assessors</div>
+        <div class="topnav-tagline">DPA 2024 Compliance Audit</div>
+      </div>
+    </a>
+    <div class="topnav-nav">
+      <a href="dashboard.html" class="topnav-link">← Dashboard</a>
+    </div>
+    <div class="topnav-spacer"></div>
+    <div class="topnav-actions">
+      <button class="btn btn-teal btn-sm" onclick="AuditApp.showResults()" id="btn-view-results" style="display:none">View Results →</button>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Audit Layout -->
+<div class="audit-layout">
+
+  <!-- Sidebar -->
+  <aside class="audit-sidebar" id="audit-sidebar">
+    <div style="padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px">
+      <div style="background:#fff;border-radius:7px;padding:6px 12px;display:inline-flex;align-items:center;box-shadow:0 1px 5px rgba(0,0,0,0.18)">
+        <img src="img/fidelity-logo.png" alt="Fidelity Insurance Assessors" style="height:22px;width:auto;display:block">
+      </div>
+    </div>
+    <div class="sidebar-progress-area">
+      <div class="sp-row">
+        <span>Progress</span>
+        <span id="ap-pct">0%</span>
+      </div>
+      <div class="sp-bar"><div class="sp-fill" id="ap-fill" style="width:0%"></div></div>
+    </div>
+    <div class="audit-sidebar-title">Compliance Sections</div>
+    <div id="audit-nav-list"><!-- JS --></div>
+    <div class="sidebar-score-area" style="margin-top:auto">
+      <div class="ssa-label">Live Score</div>
+      <div class="ssa-score" id="ssa-score">—</div>
+      <div class="ssa-grade" id="ssa-grade"></div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="audit-content" id="audit-content"><!-- JS --></div>
+
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/checklist-data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/audit.js"></script>
+</body>
+</html>
