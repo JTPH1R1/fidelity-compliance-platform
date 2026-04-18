@@ -36,6 +36,7 @@ const Admin = {
   // Seed sample organizations + audit data for a realistic stakeholder demo
   // ---------------------------------------------------------------------------
   seedDemoData() {
+    if (this.dbAuthenticated) return; // real DB has real data — skip localStorage demo seeding
     if (PLATFORM.get('demo_seeded')) return;
     const h = (p) => {
       let n = 5381;
@@ -469,16 +470,24 @@ const Admin = {
     </div>`;
   },
 
-  showAddUserForm(orgId) {
+  async showAddUserForm(orgId) {
     const form = document.getElementById('add-user-form');
-    if (!form) { this.showPage('users'); setTimeout(() => this.showAddUserForm(orgId), 80); return; }
-    const users = PLATFORM.get('users', {});
-    const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
-    const orgName = member ? member.orgName : 'Organization';
+    if (!form) { await this.showPage('users'); setTimeout(() => this.showAddUserForm(orgId), 80); return; }
+    let orgName = 'Organization';
+    if (this.dbAuthenticated) {
+      try { const org = await DB.getOrg(orgId); if (org) orgName = org.name; } catch(e) {}
+    }
+    if (orgName === 'Organization') {
+      const users = PLATFORM.get('users', {});
+      const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
+      if (member) orgName = member.orgName;
+    }
     document.getElementById('add-user-org-id').value = orgId;
     document.getElementById('add-user-form-title').textContent = `➕ Add Member to ${orgName}`;
     ['add-user-name','add-user-email'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('add-user-pass').value = 'Change1234!';
+    document.getElementById('create-user-form').style.display = 'none';
+    document.getElementById('create-company-form').style.display = 'none';
     form.style.display = 'block';
     form.scrollIntoView({ behavior: 'smooth' });
   },
@@ -884,28 +893,31 @@ const Admin = {
     </div>`;
   },
 
-  showNewsForm(id) {
+  async showNewsForm(id) {
     this.editingNewsId = id || null;
     const card = document.getElementById('news-form-card');
-    const title = document.getElementById('news-form-title');
+    const titleEl = document.getElementById('news-form-title');
     if (!card) return;
     card.style.display = 'block';
-    title.textContent = id ? 'Edit Regulatory Update' : 'Add Regulatory Update';
+    titleEl.textContent = id ? 'Edit Regulatory Update' : 'Add Regulatory Update';
     if (id) {
-      const items = PLATFORM.get('news_items', []);
-      const n = items.find(x => x.id === id);
+      let n = null;
+      if (this.dbAuthenticated) {
+        try { const items = await DB.getNewsItems(); n = items.find(x => x.id === id); } catch(e) {}
+      }
+      if (!n) { const items = PLATFORM.get('news_items', []); n = items.find(x => x.id === id); }
       if (n) {
-        document.getElementById('nf-date').value = n.date;
-        document.getElementById('nf-badge').value = n.badge;
-        document.getElementById('nf-badge-class').value = n.badgeClass;
-        document.getElementById('nf-title').value = n.title;
-        document.getElementById('nf-body').value = n.body;
-        document.getElementById('nf-link').value = n.link || '';
-        document.getElementById('nf-link-text').value = n.linkText || '';
+        document.getElementById('nf-date').value       = n.date || '';
+        document.getElementById('nf-badge').value      = n.badge || '';
+        document.getElementById('nf-badge-class').value = n.badgeClass || 'badge-teal';
+        document.getElementById('nf-title').value      = n.title || '';
+        document.getElementById('nf-body').value       = n.body || '';
+        document.getElementById('nf-link').value       = n.link || '';
+        document.getElementById('nf-link-text').value  = n.linkText || '';
         document.getElementById('nf-published').checked = n.published !== false;
       }
     } else {
-      ['nf-date','nf-badge','nf-title','nf-body','nf-link','nf-link-text'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+      ['nf-date','nf-badge','nf-title','nf-body','nf-link','nf-link-text'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
       document.getElementById('nf-published').checked = true;
     }
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -939,7 +951,7 @@ const Admin = {
     await this.showPage('content');
   },
 
-  async editNews(id) { await this.showPage('content'); setTimeout(() => this.showNewsForm(id), 50); },
+  async editNews(id) { await this.showPage('content'); await this.showNewsForm(id); },
 
   async deleteNews(id) {
     if (!confirm('Delete this news update?')) return;
@@ -1028,21 +1040,24 @@ const Admin = {
     </div>`;
   },
 
-  showDocForm(id) {
+  async showDocForm(id) {
     this.editingDocId = id || null;
     const card = document.getElementById('doc-form-card');
     if (!card) return;
     card.style.display = 'block';
     document.getElementById('doc-form-title').textContent = id ? 'Edit Document' : 'Add Document';
     if (id) {
-      const docs = PLATFORM.get('doc_library', []);
-      const d = docs.find(x => x.id === id);
+      let d = null;
+      if (this.dbAuthenticated) {
+        try { const docs = await DB.getDocuments(); d = docs.find(x => x.id === id); } catch(e) {}
+      }
+      if (!d) { const docs = PLATFORM.get('doc_library', []); d = docs.find(x => x.id === id); }
       if (d) {
-        document.getElementById('df-title').value = d.title;
-        document.getElementById('df-type').value = d.type;
-        document.getElementById('df-date').value = d.date;
-        document.getElementById('df-desc').value = d.desc;
-        document.getElementById('df-url').value = d.url || '';
+        document.getElementById('df-title').value = d.title || '';
+        document.getElementById('df-type').value  = d.type  || 'Guide';
+        document.getElementById('df-date').value  = d.date  || new Date().toISOString().split('T')[0];
+        document.getElementById('df-desc').value  = d.desc  || '';
+        document.getElementById('df-url').value   = d.url   || '';
       }
     } else {
       ['df-title','df-desc','df-url'].forEach(i => { const el = document.getElementById(i); if(el) el.value=''; });
@@ -1069,7 +1084,7 @@ const Admin = {
     await this.showPage('documents');
   },
 
-  async editDoc(id) { await this.showPage('documents'); setTimeout(() => this.showDocForm(id), 50); },
+  async editDoc(id) { await this.showPage('documents'); await this.showDocForm(id); },
 
   async deleteDoc(id) {
     if (!confirm('Remove this document from the library?')) return;
@@ -1086,11 +1101,23 @@ const Admin = {
   // SETTINGS
   // ---------------------------------------------------------------------------
   async renderSettings() {
-    let s = {};
+    let s = {}, totalUsers = 0, totalAudits = 0, pendingUsers = 0, totalDocs = 0;
     if (this.dbAuthenticated) {
       try { s = await DB.getSettings(); } catch(e) { s = PLATFORM.get('platform_settings', {}); }
+      try {
+        const [profiles, audits, docs] = await Promise.all([DB.getAllProfiles(), DB.getAllAudits(), DB.getDocuments()]);
+        totalUsers   = profiles.length;
+        totalAudits  = audits.filter(a => a.completed_at).length;
+        pendingUsers = profiles.filter(p => p.status === 'pending').length;
+        totalDocs    = docs.length;
+      } catch(e) {}
     } else {
       s = PLATFORM.get('platform_settings', {});
+      const u = Object.values(PLATFORM.get('users', {}));
+      totalUsers   = u.length;
+      totalAudits  = this.getAllAudits().length;
+      pendingUsers = u.filter(x => x.status === 'pending').length;
+      totalDocs    = PLATFORM.get('doc_library', []).length;
     }
     return `
     <div class="app-main-inner">
@@ -1147,12 +1174,10 @@ const Admin = {
         <div class="card" style="grid-column:1/-1">
           <div class="card-head">📊 Platform Statistics</div>
           <div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center">
-            ${(() => { const u = Object.values(PLATFORM.get('users',{})); const a = this.getAllAudits(); return `
-              <div><div style="font-size:1.8rem;font-weight:900;color:var(--navy)">${u.length}</div><div style="font-size:0.78rem;color:var(--text-muted)">Total Users</div></div>
-              <div><div style="font-size:1.8rem;font-weight:900;color:var(--teal)">${a.length}</div><div style="font-size:0.78rem;color:var(--text-muted)">Audits Done</div></div>
-              <div><div style="font-size:1.8rem;font-weight:900;color:var(--warning)">${u.filter(x=>x.status==='pending').length}</div><div style="font-size:0.78rem;color:var(--text-muted)">Pending Approval</div></div>
-              <div><div style="font-size:1.8rem;font-weight:900;color:var(--navy-light)">${PLATFORM.get('doc_library',[]).length}</div><div style="font-size:0.78rem;color:var(--text-muted)">Documents</div></div>
-            `; })()}
+            <div><div style="font-size:1.8rem;font-weight:900;color:var(--navy)">${totalUsers}</div><div style="font-size:0.78rem;color:var(--text-muted)">Total Users</div></div>
+            <div><div style="font-size:1.8rem;font-weight:900;color:var(--teal)">${totalAudits}</div><div style="font-size:0.78rem;color:var(--text-muted)">Audits Done</div></div>
+            <div><div style="font-size:1.8rem;font-weight:900;color:var(--warning)">${pendingUsers}</div><div style="font-size:0.78rem;color:var(--text-muted)">Pending Approval</div></div>
+            <div><div style="font-size:1.8rem;font-weight:900;color:var(--navy-light)">${totalDocs}</div><div style="font-size:0.78rem;color:var(--text-muted)">Documents</div></div>
           </div>
         </div>
 

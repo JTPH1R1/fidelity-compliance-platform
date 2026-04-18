@@ -124,6 +124,11 @@ const DB = {
   // -------------------------------------------------------------------------
   // ORGANIZATIONS
   // -------------------------------------------------------------------------
+  async getOrg(orgId) {
+    const { data } = await this._client.from('organizations').select('*').eq('id', orgId).single();
+    return data || null;
+  },
+
   async createOrg(name, sector, size, address, plan = 'free') {
     const { data, error } = await this._client
       .from('organizations')
