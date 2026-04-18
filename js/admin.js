@@ -246,11 +246,110 @@ const Admin = {
       return `<span style="font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${isAdmin ? 'var(--gold-pale)' : '#e8eef5'};color:${isAdmin ? 'var(--gold-dark)' : 'var(--navy-light)'}">${isAdmin ? '⭐ Admin' : '👤 Officer'}</span>`;
     };
 
+    const orgOptions = orgList.map(o => `<option value="${PLATFORM.esc(o.orgId)}">${PLATFORM.esc(o.orgName)}</option>`).join('');
+
     return `
     <div class="app-main-inner">
       <div class="page-header">
         <div><h1 class="page-title">User Management</h1>
           <div class="page-sub">${list.length} account${list.length !== 1 ? 's' : ''} · ${orgList.length} organization${orgList.length !== 1 ? 's' : ''}${pending.length + requests.length > 0 ? ` · <span style="color:var(--warning);font-weight:700">${pending.length + requests.length} awaiting action</span>` : ''}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="Admin.showCreateUserForm()">+ Add User</button>
+          <button class="btn btn-teal btn-sm" onclick="Admin.showCreateCompanyForm()">+ Create Company</button>
+        </div>
+      </div>
+
+      <!-- Create Company Form -->
+      <div class="card" id="create-company-form" style="display:none;margin-bottom:20px">
+        <div class="card-head">🏢 Create New Company</div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Company / Organization Name</label>
+            <input class="form-control" id="cc-org-name" placeholder="e.g. Malawi Savings Bank">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sector</label>
+            <select class="form-control" id="cc-sector">
+              <option value="">— Select sector —</option>
+              <option>Banking &amp; Finance</option><option>Insurance</option>
+              <option>Telecommunications</option><option>Healthcare</option>
+              <option>Government &amp; Public Sector</option><option>Education</option>
+              <option>Retail &amp; E-commerce</option><option>Media &amp; Publishing</option>
+              <option>Legal &amp; Professional Services</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Size</label>
+            <select class="form-control" id="cc-size">
+              <option value="">— Select size —</option>
+              <option>1–10 employees</option><option>Small (11–50 employees)</option>
+              <option>Medium (51–200 employees)</option><option>Large (500+ employees)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Plan</label>
+            <select class="form-control" id="cc-plan">
+              <option value="free">Free</option>
+              <option value="standard">Standard</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div class="form-group"></div>
+          <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:14px;font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">Admin Account</div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-control" id="cc-name" placeholder="Contact person name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-control" id="cc-email" type="email" placeholder="admin@company.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Temporary Password</label>
+            <input class="form-control" id="cc-pass" value="Change1234!">
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-teal btn-sm" onclick="Admin.createCompany()">Create Company &amp; Account</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('create-company-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Add User to Org Form (global) -->
+      <div class="card" id="create-user-form" style="display:none;margin-bottom:20px">
+        <div class="card-head">👤 Add User to Organization</div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Organization</label>
+            <select class="form-control" id="cu-org-id">
+              <option value="">— Select organization —</option>
+              ${orgOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-control" id="cu-name" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-control" id="cu-email" type="email" placeholder="email@company.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select class="form-control" id="cu-role">
+              <option value="compliance_officer">Compliance Officer</option>
+              <option value="company_admin">Company Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Temporary Password</label>
+            <input class="form-control" id="cu-pass" value="Change1234!">
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-teal btn-sm" onclick="Admin.createUser()">Create Account</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('create-user-form').style.display='none'">Cancel</button>
         </div>
       </div>
 
@@ -407,6 +506,82 @@ const Admin = {
       PLATFORM.store('users', users);
     }
     document.getElementById('add-user-form').style.display = 'none';
+    await this.showPage('users');
+    PLATFORM.toast(`✅ ${name} added. Temp password: ${pass}`);
+  },
+
+  showCreateCompanyForm() {
+    const f = document.getElementById('create-company-form');
+    if (!f) return;
+    document.getElementById('create-user-form').style.display = 'none';
+    ['cc-org-name','cc-name','cc-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('cc-pass').value = 'Change1234!';
+    f.style.display = 'block';
+    f.scrollIntoView({ behavior: 'smooth' });
+  },
+
+  async createCompany() {
+    const orgName = document.getElementById('cc-org-name').value.trim();
+    const sector  = document.getElementById('cc-sector').value;
+    const size    = document.getElementById('cc-size').value;
+    const plan    = document.getElementById('cc-plan').value;
+    const name    = document.getElementById('cc-name').value.trim();
+    const email   = document.getElementById('cc-email').value.trim().toLowerCase();
+    const pass    = document.getElementById('cc-pass').value;
+    if (!orgName || !name || !email) { PLATFORM.toast('Please fill in all required fields.'); return; }
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const signupData = await DB.signUp(email, pass);
+        const org = await DB.createOrg(orgName, sector, size, '', plan);
+        await DB.createProfile(signupData.user.id, email, name, org.id, 'company_admin', 'active');
+        await DB.logActivity(signupData.user.id, 'registration', `${orgName} account created by admin`);
+      } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+      const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+      const uid = 'u_' + Date.now();
+      users[email] = { id: uid, email, name, passwordHash: h(pass), orgName, sector, size, address: '', contactRole: '', contactPhone: '', registeredAt: new Date().toISOString(), lastLogin: null, plan, status: 'active', role: 'company_admin', orgId: uid };
+      PLATFORM.store('users', users);
+    }
+    document.getElementById('create-company-form').style.display = 'none';
+    await this.showPage('users');
+    PLATFORM.toast(`✅ ${orgName} created. Temp password: ${pass}`);
+  },
+
+  showCreateUserForm() {
+    const f = document.getElementById('create-user-form');
+    if (!f) return;
+    document.getElementById('create-company-form').style.display = 'none';
+    ['cu-name','cu-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('cu-pass').value = 'Change1234!';
+    f.style.display = 'block';
+    f.scrollIntoView({ behavior: 'smooth' });
+  },
+
+  async createUser() {
+    const orgId = document.getElementById('cu-org-id').value;
+    const name  = document.getElementById('cu-name').value.trim();
+    const email = document.getElementById('cu-email').value.trim().toLowerCase();
+    const role  = document.getElementById('cu-role').value;
+    const pass  = document.getElementById('cu-pass').value;
+    if (!orgId)  { PLATFORM.toast('Please select an organization.'); return; }
+    if (!name || !email) { PLATFORM.toast('Please enter name and email.'); return; }
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const signupData = await DB.signUp(email, pass);
+        await DB.createProfile(signupData.user.id, email, name, orgId, role, 'active');
+      } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+      const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
+      if (!member) { PLATFORM.toast('Organization not found.'); return; }
+      const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+      users[email] = { id: 'u_' + Date.now(), email, name, passwordHash: h(pass), orgId, orgName: member.orgName, sector: member.sector||'', size: member.size||'', address:'', contactRole:'', contactPhone:'', registeredAt: new Date().toISOString(), lastLogin: null, plan: member.plan||'free', status: 'active', role, invitedBy: 'admin@fidelityassessors.mw' };
+      PLATFORM.store('users', users);
+    }
+    document.getElementById('create-user-form').style.display = 'none';
     await this.showPage('users');
     PLATFORM.toast(`✅ ${name} added. Temp password: ${pass}`);
   },
