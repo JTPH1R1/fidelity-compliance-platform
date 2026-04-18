@@ -38,6 +38,16 @@ const DB = {
     return data;
   },
 
+  // Used by admin to create accounts without displacing the admin's own session
+  async signUpForAdmin(email, password) {
+    const temp = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    const { data, error } = await temp.auth.signUp({ email, password, options: { emailRedirectTo: null } });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
   async signIn(email, password) {
     const { data, error } = await this._client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);

@@ -8,11 +8,13 @@ const Admin = {
   currentPage: 'overview',
   editingNewsId: null,
   editingDocId: null,
+  dbAuthenticated: false,  // true only when admin has an active Supabase session
 
   // ---------------------------------------------------------------------------
   async init() {
     const session = await PLATFORM.requireAdmin();
     if (!session) return;
+    this.dbAuthenticated = session.dbAuthenticated === true;
     this.migrateUserData();
     this.seedDemoData();
     await this.showPage('overview');
@@ -101,7 +103,7 @@ const Admin = {
 
   async updatePendingBadge() {
     let pendingUsers = 0, pendingReqs = 0;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
         const [profiles, requests] = await Promise.all([
           DB.getAllProfiles(),
@@ -125,7 +127,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderOverview() {
     let uList = [], audits = [];
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
         const [profiles, dbAudits] = await Promise.all([DB.getAllProfiles(), DB.getAllAudits()]);
         uList  = profiles.map(p => DB.normalizeProfile(p));
@@ -219,7 +221,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderUsers() {
     let list = [], requests = [];
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
         const [profiles, reqs] = await Promise.all([DB.getAllProfiles(), DB.getAllPendingRequests()]);
         list     = profiles.map(p => DB.normalizeProfile(p)).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
@@ -491,9 +493,9 @@ const Admin = {
     if (!name || !email) { PLATFORM.toast('Please enter name and email.'); return; }
     if (!email.includes('@')) { PLATFORM.toast('Please enter a valid email.'); return; }
 
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
-        const signupData = await DB.signUp(email, pass);
+        const signupData = await DB.signUpForAdmin(email, pass);
         await DB.createProfile(signupData.user.id, email, name, orgId, role, 'active');
       } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
     } else {
@@ -529,9 +531,9 @@ const Admin = {
     const email   = document.getElementById('cc-email').value.trim().toLowerCase();
     const pass    = document.getElementById('cc-pass').value;
     if (!orgName || !name || !email) { PLATFORM.toast('Please fill in all required fields.'); return; }
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
-        const signupData = await DB.signUp(email, pass);
+        const signupData = await DB.signUpForAdmin(email, pass);
         const org = await DB.createOrg(orgName, sector, size, '', plan);
         await DB.createProfile(signupData.user.id, email, name, org.id, 'company_admin', 'active');
         await DB.logActivity(signupData.user.id, 'registration', `${orgName} account created by admin`);
@@ -567,9 +569,9 @@ const Admin = {
     const pass  = document.getElementById('cu-pass').value;
     if (!orgId)  { PLATFORM.toast('Please select an organization.'); return; }
     if (!name || !email) { PLATFORM.toast('Please enter name and email.'); return; }
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
-        const signupData = await DB.signUp(email, pass);
+        const signupData = await DB.signUpForAdmin(email, pass);
         await DB.createProfile(signupData.user.id, email, name, orgId, role, 'active');
       } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
     } else {
@@ -588,12 +590,12 @@ const Admin = {
 
   async approveOfficerRequest(reqId) {
     const tempPass = 'Change1234!';
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
         const reqs = await DB.getAllPendingRequests();
         const req  = reqs.find(r => r.id === reqId);
         if (!req) { PLATFORM.toast('Request not found.'); return; }
-        const signupData = await DB.signUp(req.email, tempPass);
+        const signupData = await DB.signUpForAdmin(req.email, tempPass);
         await DB.createProfile(signupData.user.id, req.email, req.name, req.org_id, 'compliance_officer', 'active', { invited_by: req.requested_by });
         await DB.resolveOfficerRequest(reqId, 'approved');
       } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
@@ -619,7 +621,7 @@ const Admin = {
 
   async rejectOfficerRequest(reqId) {
     if (!confirm('Reject this officer request? The company admin will need to resubmit.')) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.resolveOfficerRequest(reqId, 'rejected'); } catch(e) {}
     } else {
       const requests = PLATFORM.get('officer_requests', []);
@@ -634,7 +636,7 @@ const Admin = {
 
   async promoteToAdmin(userId, email) {
     if (!confirm(`Grant company admin rights to ${email}?\n\nThey will be able to request adding compliance officers to their organization.`)) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.updateProfile(userId, { role: 'company_admin' }); } catch(e) {}
     } else {
       const users = PLATFORM.get('users', {});
@@ -645,7 +647,7 @@ const Admin = {
   },
 
   async approveUser(userId, email) {
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.updateProfile(userId, { status: 'active' }); } catch(e) {}
     } else {
       const users = PLATFORM.get('users', {});
@@ -658,7 +660,7 @@ const Admin = {
 
   async suspendUser(userId, email) {
     if (!confirm(`Suspend account for ${email}?`)) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.updateProfile(userId, { status: 'suspended' }); } catch(e) {}
     } else {
       const users = PLATFORM.get('users', {});
@@ -669,7 +671,7 @@ const Admin = {
   },
 
   async activateUser(userId, email) {
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.updateProfile(userId, { status: 'active' }); } catch(e) {}
     } else {
       const users = PLATFORM.get('users', {});
@@ -681,7 +683,7 @@ const Admin = {
 
   async deleteUser(userId, email) {
     if (!confirm(`Permanently delete account for ${email}? This cannot be undone.`)) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.deleteProfile(userId); } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
     } else {
       const users = PLATFORM.get('users', {});
@@ -699,7 +701,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderAudits() {
     let audits = [];
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try {
         const dbAudits = await DB.getAllAudits();
         audits = dbAudits.map(a => {
@@ -758,7 +760,7 @@ const Admin = {
   },
 
   async markReviewed(auditId, userId) {
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.markAuditReviewed(auditId); } catch(e) {}
     } else {
       const audit = PLATFORM.get('audit_' + userId);
@@ -799,7 +801,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderContent() {
     let items = [];
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { items = await DB.getNewsItems(); } catch(e) { items = PLATFORM.get('news_items', []); }
     } else {
       items = PLATFORM.get('news_items', []);
@@ -925,7 +927,7 @@ const Admin = {
       linkText: document.getElementById('nf-link-text').value.trim() || 'Read more ↗',
       published: document.getElementById('nf-published').checked
     };
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.saveNewsItem(item); } catch(e) { PLATFORM.toast('Error saving: ' + e.message); return; }
     } else {
       item.id = item.id || 'n_' + Date.now();
@@ -941,7 +943,7 @@ const Admin = {
 
   async deleteNews(id) {
     if (!confirm('Delete this news update?')) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.deleteNewsItem(id); } catch(e) {}
     } else {
       PLATFORM.store('news_items', PLATFORM.get('news_items', []).filter(n => n.id !== id));
@@ -955,7 +957,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderDocuments() {
     let docs = [];
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { docs = await DB.getDocuments(); } catch(e) { docs = PLATFORM.get('doc_library', []); }
     } else {
       docs = PLATFORM.get('doc_library', []);
@@ -1055,7 +1057,7 @@ const Admin = {
     const title = document.getElementById('df-title').value.trim();
     if (!title) { PLATFORM.toast('Please enter a document title.'); return; }
     const doc = { id: this.editingDocId || null, title, type: document.getElementById('df-type').value, date: document.getElementById('df-date').value, desc: document.getElementById('df-desc').value.trim(), url: document.getElementById('df-url').value.trim() || '#' };
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.saveDocument(doc); } catch(e) { PLATFORM.toast('Error saving: ' + e.message); return; }
     } else {
       doc.id = doc.id || 'd_' + Date.now();
@@ -1071,7 +1073,7 @@ const Admin = {
 
   async deleteDoc(id) {
     if (!confirm('Remove this document from the library?')) return;
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.deleteDocument(id); } catch(e) {}
     } else {
       PLATFORM.store('doc_library', PLATFORM.get('doc_library', []).filter(d => d.id !== id));
@@ -1085,7 +1087,7 @@ const Admin = {
   // ---------------------------------------------------------------------------
   async renderSettings() {
     let s = {};
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { s = await DB.getSettings(); } catch(e) { s = PLATFORM.get('platform_settings', {}); }
     } else {
       s = PLATFORM.get('platform_settings', {});
@@ -1181,7 +1183,7 @@ const Admin = {
       supportEmail: document.getElementById('s-email').value.trim(),
       dpoEmail: document.getElementById('s-dpo').value.trim()
     };
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    if (this.dbAuthenticated) {
       try { await DB.saveSettings(s); } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
     } else {
       PLATFORM.store('platform_settings', s);
