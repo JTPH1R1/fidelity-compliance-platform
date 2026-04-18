@@ -237,7 +237,7 @@ const DB = {
   // -------------------------------------------------------------------------
   async logActivity(userId, type, description) {
     if (!userId || !this._client) return;
-    await this._client.from('activity_log').insert({ user_id: userId, type, description }).catch(() => {});
+    try { await this._client.from('activity_log').insert({ user_id: userId, type, description }); } catch(e) {}
   },
 
   async getActivity(userId) {
