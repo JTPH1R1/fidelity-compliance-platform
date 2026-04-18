@@ -157,14 +157,14 @@ const Admin = {
         <a href="index.html" target="_blank" class="btn btn-outline btn-sm">View Live Site ↗</a>
       </div>
 
-      <div class="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+      <div class="stats-row admin-4stat" style="margin-bottom:24px">
         ${this.statCard('Total Accounts', total, '👥', 'var(--navy)')}
         ${this.statCard('Pending Approval', pending, '⏳', pending > 0 ? 'var(--warning)' : 'var(--text-muted)')}
         ${this.statCard('Active Users', active, '✅', 'var(--teal)')}
         ${this.statCard('Audits Completed', completed, '📋', 'var(--navy-light)')}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="admin-2col">
         <!-- Recent Registrations -->
         <div class="card p-0">
           <div class="card-head">👥 Recent Registrations</div>
@@ -266,7 +266,7 @@ const Admin = {
       <!-- Create Company Form -->
       <div class="card" id="create-company-form" style="display:none;margin-bottom:20px">
         <div class="card-head">🏢 Create New Company</div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="admin-form-grid" style="padding:20px">
           <div class="form-group" style="grid-column:1/-1">
             <label class="form-label">Company / Organization Name</label>
             <input class="form-control" id="cc-org-name" placeholder="e.g. Malawi Savings Bank">
@@ -322,7 +322,7 @@ const Admin = {
       <!-- Add User to Org Form (global) -->
       <div class="card" id="create-user-form" style="display:none;margin-bottom:20px">
         <div class="card-head">👤 Add User to Organization</div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="admin-form-grid" style="padding:20px">
           <div class="form-group" style="grid-column:1/-1">
             <label class="form-label">Organization</label>
             <select class="form-control" id="cu-org-id">
@@ -403,7 +403,7 @@ const Admin = {
       <!-- Add User to Company (hidden by default) -->
       <div class="card" id="add-user-form" style="display:none;margin-bottom:20px">
         <div class="card-head" id="add-user-form-title">➕ Add Member to Organization</div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="admin-form-grid" style="padding:20px">
           <input type="hidden" id="add-user-org-id">
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -825,7 +825,7 @@ const Admin = {
       <!-- Add/Edit Form (hidden by default) -->
       <div class="card" id="news-form-card" style="display:none;margin-bottom:20px">
         <div class="card-head" id="news-form-title">Add Regulatory Update</div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="admin-form-grid" style="padding:20px">
           <div class="form-group">
             <label class="form-label">Date Label</label>
             <input class="form-control" id="nf-date" placeholder="e.g. January 2025">
@@ -985,7 +985,7 @@ const Admin = {
       <!-- Add/Edit Form -->
       <div class="card" id="doc-form-card" style="display:none;margin-bottom:20px">
         <div class="card-head" id="doc-form-title">Add Document</div>
-        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="admin-form-grid" style="padding:20px">
           <div class="form-group" style="grid-column:1/-1">
             <label class="form-label">Document Title</label>
             <input class="form-control" id="df-title" placeholder="e.g. DPA 2024 Compliance Checklist">
@@ -1125,7 +1125,7 @@ const Admin = {
         <div><h1 class="page-title">Platform Settings</h1><div class="page-sub">Configuration and access controls</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="admin-2col">
 
         <div class="card">
           <div class="card-head">🔐 Access Control</div>
@@ -1173,7 +1173,7 @@ const Admin = {
 
         <div class="card" style="grid-column:1/-1">
           <div class="card-head">📊 Platform Statistics</div>
-          <div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center">
+          <div class="admin-4stat" style="padding:20px;text-align:center">
             <div><div style="font-size:1.8rem;font-weight:900;color:var(--navy)">${totalUsers}</div><div style="font-size:0.78rem;color:var(--text-muted)">Total Users</div></div>
             <div><div style="font-size:1.8rem;font-weight:900;color:var(--teal)">${totalAudits}</div><div style="font-size:0.78rem;color:var(--text-muted)">Audits Done</div></div>
             <div><div style="font-size:1.8rem;font-weight:900;color:var(--warning)">${pendingUsers}</div><div style="font-size:0.78rem;color:var(--text-muted)">Pending Approval</div></div>

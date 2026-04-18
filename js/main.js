@@ -187,4 +187,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const todayEl = document.getElementById('today-date');
   if (todayEl) todayEl.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  // --- Mobile sidebar toggle ---
+  const sidebar = document.getElementById('app-sidebar') || document.getElementById('audit-sidebar');
+  if (sidebar) {
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    const closeSidebar = () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); };
+    overlay.addEventListener('click', closeSidebar);
+
+    // Hamburger button — insert as first child of topnav-inner
+    const topnavInner = document.querySelector('.topnav-inner');
+    if (topnavInner) {
+      const btn = document.createElement('button');
+      btn.className = 'mobile-menu-btn';
+      btn.setAttribute('aria-label', 'Toggle navigation');
+      btn.innerHTML = '<div class="hamburger-icon"><span></span><span></span><span></span></div>';
+      btn.addEventListener('click', () => {
+        const isOpen = sidebar.classList.toggle('open');
+        overlay.classList.toggle('show', isOpen);
+      });
+      topnavInner.insertBefore(btn, topnavInner.firstChild);
+    }
+
+    // Close sidebar when a nav link is clicked (mobile UX)
+    sidebar.querySelectorAll('a, button').forEach(el => {
+      el.addEventListener('click', () => {
+        if (window.innerWidth <= 768) closeSidebar();
+      });
+    });
+  }
 });

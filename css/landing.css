@@ -299,6 +299,7 @@
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
   .hero-visual { display: none; }
+  .hero-grid { padding: 40px 20px; }
   .dpa-layout { grid-template-columns: 1fr; }
   .how-steps::before { display: none; }
   .how-steps { grid-template-columns: 1fr; gap: 24px; }
@@ -307,6 +308,7 @@
   .pricing-grid { grid-template-columns: 1fr; }
   .pricing-card.featured { transform: none; }
   .updates-grid { grid-template-columns: 1fr; }
+  .landing-nav .nav-links { display: none; }
 }
 @media (max-width: 600px) {
   .areas-grid { grid-template-columns: 1fr 1fr; }
@@ -314,4 +316,12 @@
   .dpa-principles { grid-template-columns: 1fr; }
   .urgency-inner { gap: 16px; }
   .features-grid { grid-template-columns: 1fr; }
+  .landing-nav .nav-inner { padding: 0 16px; }
+  .landing-nav .nav-actions { gap: 6px; }
+  .hero h1 { font-size: clamp(1.8rem, 6vw, 2.4rem); }
+  .hero-lead { font-size: 0.95rem; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .trust-dot { display: none; }
+  .section { padding: 52px 0; }
 }

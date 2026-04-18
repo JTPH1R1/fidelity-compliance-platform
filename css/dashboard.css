@@ -246,22 +246,63 @@
 .modal-body { padding: 24px; }
 .modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 
+/* --- Responsive admin grid helpers (used in admin.js templates) --- */
+.admin-2col  { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.admin-4stat { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
 /* Responsive */
 @media (max-width: 1024px) {
   :root { --sidebar-w: 220px; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
+  .admin-4stat { grid-template-columns: repeat(2,1fr); }
 }
 @media (max-width: 768px) {
-  .app-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+  /* App sidebar — slides in from left */
+  .app-sidebar {
+    transform: translateX(-100%); transition: transform 0.3s ease;
+    position: fixed; z-index: 150;
+  }
   .app-sidebar.open { transform: translateX(0); }
   .app-main { margin-left: 0; }
-  .page-body { padding: 16px; }
-  .page-header { padding: 14px 16px; }
+
+  /* Audit sidebar — same treatment */
+  .audit-sidebar {
+    position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
+    width: 268px; height: auto;
+    transform: translateX(-100%); transition: transform 0.3s ease;
+    z-index: 150;
+  }
+  .audit-sidebar.open { transform: translateX(0); }
+  .audit-content { width: 100%; }
+
+  /* Page chrome */
+  .page-body   { padding: 16px; }
+  .page-header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .page-header .page-title { font-size: 1.1rem; }
+  .app-main-inner { padding: 16px !important; }
+
+  /* Grids */
   .dashboard-grid { grid-template-columns: 1fr; }
   .col-span-2 { grid-column: span 1; }
   .stats-row { grid-template-columns: 1fr 1fr; }
+  .admin-2col  { grid-template-columns: 1fr; }
+  .admin-4stat { grid-template-columns: 1fr 1fr; }
+  .admin-form-grid { grid-template-columns: 1fr; }
+
+  /* Tables — horizontal scroll */
+  .card.p-0 { overflow-x: auto; }
+  .admin-table { min-width: 580px; }
+
+  /* Section progress bar */
+  .sec-prog-bar-wrap { width: 60px; }
+
+  /* Grade display stacks */
+  .grade-display { flex-direction: column; text-align: center; }
 }
 @media (max-width: 480px) {
   .stats-row { grid-template-columns: 1fr; }
+  .admin-4stat { grid-template-columns: 1fr 1fr; }
   .quick-actions { grid-template-columns: 1fr; }
+  .page-header { flex-direction: column; align-items: flex-start; }
 }

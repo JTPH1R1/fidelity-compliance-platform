@@ -341,16 +341,55 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 }
 
 /* =============================================================================
+   FORM-CONTROL (alias used in admin forms)
+   ============================================================================= */
+.form-control {
+  width: 100%; padding: 10px 13px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-family: var(--font); color: var(--text);
+  background: #fff; transition: border-color 0.15s; display: block;
+}
+.form-control:focus { outline: none; border-color: var(--navy-light); box-shadow: 0 0 0 3px rgba(26,58,92,0.1); }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; min-height: 80px; }
+
+/* =============================================================================
+   MOBILE SIDEBAR TOGGLE
+   ============================================================================= */
+.mobile-menu-btn {
+  display: none; background: none; border: none; cursor: pointer;
+  padding: 8px; border-radius: var(--radius-sm); color: var(--navy);
+  flex-shrink: 0; align-items: center; justify-content: center;
+}
+.mobile-menu-btn:hover { background: var(--gray-100); }
+.hamburger-icon { display: flex; flex-direction: column; gap: 5px; width: 22px; }
+.hamburger-icon span { display: block; width: 100%; height: 2px; background: currentColor; border-radius: 2px; transition: var(--trans); }
+
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 99;
+}
+.sidebar-overlay.show { display: block; }
+
+/* =============================================================================
    RESPONSIVE BASE
    ============================================================================= */
 @media (max-width: 768px) {
+  .mobile-menu-btn { display: flex; }
   .topnav-nav { display: none; }
+  .topnav-inner { padding: 0 14px; gap: 10px; }
+  .topnav-brand-divider { display: none; }
+  .topnav-name, .topnav-tagline { display: none; }
+  .topnav-actions { gap: 6px; }
+  .topnav-actions > span[style*="color:var(--text-muted)"] { display: none; }
+  .topnav-user-name { display: none; }
   .container, .container-sm, .container-lg { padding: 0 16px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   .footer-grid > div:first-child { grid-column: 1 / -1; }
   .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
+  .topnav-logo-img { height: 32px; }
   .footer-grid { grid-template-columns: 1fr; }
   .footer-bottom { flex-direction: column; text-align: center; }
 }
