@@ -256,9 +256,12 @@ const Auth = {
   // ---------------------------------------------------------------------------
   // Logout
   // ---------------------------------------------------------------------------
-  logout() {
+  async logout() {
     PLATFORM.remove('currentUser');
-    window.location.href = 'auth.html';
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.signOut(); } catch(e) {}
+    }
+    window.location.href = 'auth.html?fresh=1';
   },
 
   // ---------------------------------------------------------------------------
@@ -289,8 +292,11 @@ const Auth = {
   // Init (auth.html page)
   // ---------------------------------------------------------------------------
   async init() {
-    // Check if already logged in via DB session
-    if (typeof DB_READY === 'function' && DB_READY()) {
+    // ?fresh=1 means user just signed out — skip session check to avoid instant redirect
+    if (new URLSearchParams(window.location.search).get('fresh') === '1') {
+      history.replaceState(null, '', 'auth.html');
+    } else if (typeof DB_READY === 'function' && DB_READY()) {
+      // Check if already logged in via DB session
       try {
         const session = await DB.getSession();
         if (session) {
