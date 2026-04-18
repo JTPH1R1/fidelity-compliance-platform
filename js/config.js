@@ -4,7 +4,7 @@
 // =============================================================================
 
 const SUPABASE_CONFIG = {
-  url:     'https://YOUR_PROhttps://hruxxxybcadlcaxjljpw.supabase.co',
+  url:     'https://hruxxxybcadlcaxjljpw.supabase.co',
   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhydXh4eHliY2FkbGNheGpsanB3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTM3MjYsImV4cCI6MjA5MjA4OTcyNn0.L9Go0H7fNwc2fPFUm8qajihXQTXQhIzdAxT3HLWlcm8'
 };
 
