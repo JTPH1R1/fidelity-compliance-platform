@@ -10,12 +10,12 @@ const Admin = {
   editingDocId: null,
 
   // ---------------------------------------------------------------------------
-  init() {
-    const session = PLATFORM.requireAdmin();
+  async init() {
+    const session = await PLATFORM.requireAdmin();
     if (!session) return;
     this.migrateUserData();
     this.seedDemoData();
-    this.showPage('overview');
+    await this.showPage('overview');
     this.updatePendingBadge();
   },
 
@@ -86,20 +86,35 @@ const Admin = {
   // ---------------------------------------------------------------------------
   // Page navigation
   // ---------------------------------------------------------------------------
-  showPage(page) {
+  async showPage(page) {
     this.currentPage = page;
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.page === page);
     });
     const content = document.getElementById('admin-content');
     const map = { overview: 'renderOverview', users: 'renderUsers', audits: 'renderAudits', content: 'renderContent', documents: 'renderDocuments', settings: 'renderSettings' };
-    if (content && map[page]) content.innerHTML = this[map[page]]();
+    if (content && map[page]) {
+      content.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-muted)">Loading…</div>';
+      content.innerHTML = await this[map[page]]();
+    }
   },
 
-  updatePendingBadge() {
-    const users    = PLATFORM.get('users', {});
-    const pendingUsers = Object.values(users).filter(u => u.status === 'pending').length;
-    const pendingReqs  = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending').length;
+  async updatePendingBadge() {
+    let pendingUsers = 0, pendingReqs = 0;
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [profiles, requests] = await Promise.all([
+          DB.getAllProfiles(),
+          DB.getAllPendingRequests()
+        ]);
+        pendingUsers = profiles.filter(p => p.status === 'pending').length;
+        pendingReqs  = requests.length;
+      } catch(e) {}
+    } else {
+      const users = PLATFORM.get('users', {});
+      pendingUsers = Object.values(users).filter(u => u.status === 'pending').length;
+      pendingReqs  = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending').length;
+    }
     const n = pendingUsers + pendingReqs;
     const badge = document.getElementById('pending-badge');
     if (badge) { badge.textContent = n; badge.style.display = n > 0 ? 'inline-flex' : 'none'; }
@@ -108,17 +123,29 @@ const Admin = {
   // ---------------------------------------------------------------------------
   // OVERVIEW
   // ---------------------------------------------------------------------------
-  renderOverview() {
-    const users = PLATFORM.get('users', {});
-    const uList = Object.values(users);
-    const total = uList.length;
-    const pending = uList.filter(u => u.status === 'pending').length;
-    const active = uList.filter(u => u.status === 'active').length;
-    const audits = this.getAllAudits();
+  async renderOverview() {
+    let uList = [], audits = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [profiles, dbAudits] = await Promise.all([DB.getAllProfiles(), DB.getAllAudits()]);
+        uList  = profiles.map(p => DB.normalizeProfile(p));
+        audits = dbAudits.map(a => {
+          const score = this.calcScore(a.answers || {});
+          return { userId: a.user_id, orgName: (a.organizations || {}).name || '', email: (a.profiles || {}).email || '', sector: (a.organizations || {}).sector || '', score, completedAt: a.completed_at, reviewed: a.reviewed || false };
+        });
+      } catch(e) { console.warn('[Admin] DB overview failed:', e.message); }
+    } else {
+      const users = PLATFORM.get('users', {});
+      uList  = Object.values(users);
+      audits = this.getAllAudits();
+    }
+    const total     = uList.length;
+    const pending   = uList.filter(u => u.status === 'pending').length;
+    const active    = uList.filter(u => u.status === 'active').length;
     const completed = audits.length;
-    const avgScore = completed ? Math.round(audits.reduce((s, a) => s + a.score, 0) / completed) : 0;
-    const grade = this.getGrade(avgScore);
-    const recent = uList.sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt)).slice(0, 5);
+    const avgScore  = completed ? Math.round(audits.reduce((s, a) => s + a.score, 0) / completed) : 0;
+    const grade     = this.getGrade(avgScore);
+    const recent    = [...uList].sort((a,b) => new Date(b.registeredAt || b.created_at) - new Date(a.registeredAt || a.created_at)).slice(0, 5);
 
     return `
     <div class="app-main-inner">
@@ -190,11 +217,20 @@ const Admin = {
   // ---------------------------------------------------------------------------
   // USERS
   // ---------------------------------------------------------------------------
-  renderUsers() {
-    const users    = PLATFORM.get('users', {});
-    const list     = Object.values(users).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
-    const pending  = list.filter(u => u.status === 'pending');
-    const requests = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending');
+  async renderUsers() {
+    let list = [], requests = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [profiles, reqs] = await Promise.all([DB.getAllProfiles(), DB.getAllPendingRequests()]);
+        list     = profiles.map(p => DB.normalizeProfile(p)).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
+        requests = reqs.map(r => ({ id: r.id, orgId: r.org_id, orgName: r.org_name, requestedBy: r.requested_by, name: r.name, email: r.email, status: r.status, createdAt: r.created_at }));
+      } catch(e) { console.warn('[Admin] DB users failed:', e.message); }
+    } else {
+      const users = PLATFORM.get('users', {});
+      list     = Object.values(users).sort((a,b) => new Date(b.registeredAt) - new Date(a.registeredAt));
+      requests = PLATFORM.get('officer_requests', []).filter(r => r.status === 'pending');
+    }
+    const pending = list.filter(u => u.status === 'pending');
 
     // Group by orgId
     const orgs = {};
@@ -231,8 +267,8 @@ const Admin = {
               <td style="font-size:0.78rem;color:var(--text-muted)">${PLATFORM.timeAgo(u.registeredAt)}</td>
               <td>
                 <div style="display:flex;gap:6px">
-                  <button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(u.email)}')">✓ Approve</button>
-                  <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(u.email)}')">Reject &amp; Delete</button>
+                  <button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(u.id)}','${PLATFORM.esc(u.email)}')">✓ Approve</button>
+                  <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(u.id)}','${PLATFORM.esc(u.email)}')">Reject &amp; Delete</button>
                 </div>
               </td>
             </tr>`).join('')}
@@ -317,11 +353,11 @@ const Admin = {
                   <td style="font-size:0.78rem;color:var(--text-muted)">${m.lastLogin ? PLATFORM.timeAgo(m.lastLogin) : 'Never'}</td>
                   <td>
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
-                      ${m.status === 'pending'    ? `<button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(m.email)}')">✓ Approve</button>` : ''}
-                      ${m.status === 'active' && (m.role || 'company_admin') !== 'company_admin' ? `<button class="btn-action btn-warn" onclick="Admin.promoteToAdmin('${PLATFORM.esc(m.email)}')">Make Admin</button>` : ''}
-                      ${m.status === 'active'     ? `<button class="btn-action btn-warn" onclick="Admin.suspendUser('${PLATFORM.esc(m.email)}')">Suspend</button>` : ''}
-                      ${m.status === 'suspended'  ? `<button class="btn-action btn-approve" onclick="Admin.activateUser('${PLATFORM.esc(m.email)}')">Activate</button>` : ''}
-                      <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(m.email)}')">Delete</button>
+                      ${m.status === 'pending'    ? `<button class="btn-action btn-approve" onclick="Admin.approveUser('${PLATFORM.esc(m.id)}','${PLATFORM.esc(m.email)}')">✓ Approve</button>` : ''}
+                      ${m.status === 'active' && (m.role || 'company_admin') !== 'company_admin' ? `<button class="btn-action btn-warn" onclick="Admin.promoteToAdmin('${PLATFORM.esc(m.id)}','${PLATFORM.esc(m.email)}')">Make Admin</button>` : ''}
+                      ${m.status === 'active'     ? `<button class="btn-action btn-warn" onclick="Admin.suspendUser('${PLATFORM.esc(m.id)}','${PLATFORM.esc(m.email)}')">Suspend</button>` : ''}
+                      ${m.status === 'suspended'  ? `<button class="btn-action btn-approve" onclick="Admin.activateUser('${PLATFORM.esc(m.id)}','${PLATFORM.esc(m.email)}')">Activate</button>` : ''}
+                      <button class="btn-action btn-danger" onclick="Admin.deleteUser('${PLATFORM.esc(m.id)}','${PLATFORM.esc(m.email)}')">Delete</button>
                     </div>
                   </td>
                 </tr>`).join('')}
@@ -346,7 +382,7 @@ const Admin = {
     form.scrollIntoView({ behavior: 'smooth' });
   },
 
-  addUserToOrg() {
+  async addUserToOrg() {
     const orgId = document.getElementById('add-user-org-id').value;
     const name  = document.getElementById('add-user-name').value.trim();
     const email = document.getElementById('add-user-email').value.trim().toLowerCase();
@@ -356,127 +392,149 @@ const Admin = {
     if (!name || !email) { PLATFORM.toast('Please enter name and email.'); return; }
     if (!email.includes('@')) { PLATFORM.toast('Please enter a valid email.'); return; }
 
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { PLATFORM.toast('An account with this email already exists.'); return; }
-
-    const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
-    if (!member) { PLATFORM.toast('Organization not found.'); return; }
-
-    const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
-    const userId = 'u_' + Date.now();
-    const now = new Date().toISOString();
-
-    users[email] = {
-      id: userId, email, name,
-      passwordHash: h(pass),
-      orgId, orgName: member.orgName,
-      sector: member.sector || '', size: member.size || '',
-      address: member.address || '', contactRole: 'Compliance Officer', contactPhone: '',
-      registeredAt: now, lastLogin: null,
-      plan: member.plan || 'free',
-      status: 'active',
-      role, invitedBy: 'admin@fidelityassessors.mw'
-    };
-    PLATFORM.store('users', users);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const signupData = await DB.signUp(email, pass);
+        await DB.createProfile(signupData.user.id, email, name, orgId, role, 'active');
+      } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+      const member = Object.values(users).find(u => (u.orgId || u.id) === orgId);
+      if (!member) { PLATFORM.toast('Organization not found.'); return; }
+      const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+      users[email] = { id: 'u_' + Date.now(), email, name, passwordHash: h(pass), orgId, orgName: member.orgName, sector: member.sector || '', size: member.size || '', address: member.address || '', contactRole: 'Compliance Officer', contactPhone: '', registeredAt: new Date().toISOString(), lastLogin: null, plan: member.plan || 'free', status: 'active', role, invitedBy: 'admin@fidelityassessors.mw' };
+      PLATFORM.store('users', users);
+    }
     document.getElementById('add-user-form').style.display = 'none';
-    this.showPage('users');
-    PLATFORM.toast(`✅ ${name} added to ${member.orgName}. Temp password: ${pass}`);
+    await this.showPage('users');
+    PLATFORM.toast(`✅ ${name} added. Temp password: ${pass}`);
   },
 
-  approveOfficerRequest(reqId) {
-    const requests = PLATFORM.get('officer_requests', []);
-    const req = requests.find(r => r.id === reqId);
-    if (!req) { PLATFORM.toast('Request not found.'); return; }
-
-    const users = PLATFORM.get('users', {});
-    if (users[req.email]) { PLATFORM.toast('An account with this email already exists.'); return; }
-
-    const member = Object.values(users).find(u => (u.orgId || u.id) === req.orgId);
-    const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+  async approveOfficerRequest(reqId) {
     const tempPass = 'Change1234!';
-    const userId   = 'u_' + Date.now();
-    const now      = new Date().toISOString();
-
-    users[req.email] = {
-      id: userId, email: req.email, name: req.name,
-      passwordHash: h(tempPass),
-      orgId: req.orgId, orgName: req.orgName,
-      sector: member ? member.sector : '', size: member ? member.size : '',
-      address: '', contactRole: 'Compliance Officer', contactPhone: '',
-      registeredAt: now, lastLogin: null,
-      plan: member ? (member.plan || 'free') : 'free',
-      status: 'active',
-      role: 'compliance_officer', invitedBy: req.requestedBy
-    };
-    PLATFORM.store('users', users);
-
-    req.status = 'approved';
-    PLATFORM.store('officer_requests', requests);
-
-    this.updatePendingBadge();
-    this.showPage('users');
-    PLATFORM.toast(`✅ ${req.name} approved. Account created. Temp password: ${tempPass}`);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const reqs = await DB.getAllPendingRequests();
+        const req  = reqs.find(r => r.id === reqId);
+        if (!req) { PLATFORM.toast('Request not found.'); return; }
+        const signupData = await DB.signUp(req.email, tempPass);
+        await DB.createProfile(signupData.user.id, req.email, req.name, req.org_id, 'compliance_officer', 'active', { invited_by: req.requested_by });
+        await DB.resolveOfficerRequest(reqId, 'approved');
+      } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      const requests = PLATFORM.get('officer_requests', []);
+      const req = requests.find(r => r.id === reqId);
+      if (!req) { PLATFORM.toast('Request not found.'); return; }
+      const users = PLATFORM.get('users', {});
+      if (users[req.email]) { PLATFORM.toast('An account with this email already exists.'); return; }
+      const member = Object.values(users).find(u => (u.orgId || u.id) === req.orgId);
+      const h = (p) => { let n=5381; for(let i=0;i<p.length;i++) n=((n<<5)+n)^p.charCodeAt(i); return (n>>>0).toString(36)+'_'+p.length; };
+      const uid = 'u_' + Date.now();
+      users[req.email] = { id: uid, email: req.email, name: req.name, passwordHash: h(tempPass), orgId: req.orgId, orgName: req.orgName, sector: member ? member.sector : '', size: member ? member.size : '', address: '', contactRole: 'Compliance Officer', contactPhone: '', registeredAt: new Date().toISOString(), lastLogin: null, plan: member ? (member.plan || 'free') : 'free', status: 'active', role: 'compliance_officer', invitedBy: req.requestedBy };
+      PLATFORM.store('users', users);
+      req.status = 'approved';
+      PLATFORM.store('officer_requests', requests);
+    }
+    const reqName = 'officer';
+    await this.updatePendingBadge();
+    await this.showPage('users');
+    PLATFORM.toast(`✅ Officer approved. Account created. Temp password: ${tempPass}`);
   },
 
-  rejectOfficerRequest(reqId) {
+  async rejectOfficerRequest(reqId) {
     if (!confirm('Reject this officer request? The company admin will need to resubmit.')) return;
-    const requests = PLATFORM.get('officer_requests', []);
-    const req = requests.find(r => r.id === reqId);
-    if (req) req.status = 'rejected';
-    PLATFORM.store('officer_requests', requests);
-    this.updatePendingBadge();
-    this.showPage('users');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.resolveOfficerRequest(reqId, 'rejected'); } catch(e) {}
+    } else {
+      const requests = PLATFORM.get('officer_requests', []);
+      const req = requests.find(r => r.id === reqId);
+      if (req) req.status = 'rejected';
+      PLATFORM.store('officer_requests', requests);
+    }
+    await this.updatePendingBadge();
+    await this.showPage('users');
     PLATFORM.toast('Officer request rejected.');
   },
 
-  promoteToAdmin(email) {
+  async promoteToAdmin(userId, email) {
     if (!confirm(`Grant company admin rights to ${email}?\n\nThey will be able to request adding compliance officers to their organization.`)) return;
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { users[email].role = 'company_admin'; PLATFORM.store('users', users); }
-    this.showPage('users');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.updateProfile(userId, { role: 'company_admin' }); } catch(e) {}
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { users[email].role = 'company_admin'; PLATFORM.store('users', users); }
+    }
+    await this.showPage('users');
     PLATFORM.toast('✅ User promoted to company admin.');
   },
 
-  approveUser(email) {
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { users[email].status = 'active'; PLATFORM.store('users', users); }
-    this.updatePendingBadge();
-    this.showPage('users');
+  async approveUser(userId, email) {
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.updateProfile(userId, { status: 'active' }); } catch(e) {}
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { users[email].status = 'active'; PLATFORM.store('users', users); }
+    }
+    await this.updatePendingBadge();
+    await this.showPage('users');
     PLATFORM.toast(`✅ ${email} approved and activated.`);
   },
 
-  suspendUser(email) {
+  async suspendUser(userId, email) {
     if (!confirm(`Suspend account for ${email}?`)) return;
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { users[email].status = 'suspended'; PLATFORM.store('users', users); }
-    this.showPage('users');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.updateProfile(userId, { status: 'suspended' }); } catch(e) {}
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { users[email].status = 'suspended'; PLATFORM.store('users', users); }
+    }
+    await this.showPage('users');
     PLATFORM.toast('Account suspended.');
   },
 
-  activateUser(email) {
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { users[email].status = 'active'; PLATFORM.store('users', users); }
-    this.showPage('users');
+  async activateUser(userId, email) {
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.updateProfile(userId, { status: 'active' }); } catch(e) {}
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[email]) { users[email].status = 'active'; PLATFORM.store('users', users); }
+    }
+    await this.showPage('users');
     PLATFORM.toast('✅ Account reactivated.');
   },
 
-  deleteUser(email) {
+  async deleteUser(userId, email) {
     if (!confirm(`Permanently delete account for ${email}? This cannot be undone.`)) return;
-    const users = PLATFORM.get('users', {});
-    const uid = users[email] ? users[email].id : null;
-    delete users[email];
-    PLATFORM.store('users', users);
-    if (uid) PLATFORM.remove('audit_' + uid);
-    this.updatePendingBadge();
-    this.showPage('users');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.deleteProfile(userId); } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      delete users[email];
+      PLATFORM.store('users', users);
+      PLATFORM.remove('audit_' + userId);
+    }
+    await this.updatePendingBadge();
+    await this.showPage('users');
     PLATFORM.toast('Account deleted.');
   },
 
   // ---------------------------------------------------------------------------
   // AUDITS
   // ---------------------------------------------------------------------------
-  renderAudits() {
-    const audits = this.getAllAudits();
+  async renderAudits() {
+    let audits = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const dbAudits = await DB.getAllAudits();
+        audits = dbAudits.map(a => {
+          const score = this.calcScore(a.answers || {});
+          return { id: a.id, userId: a.user_id, orgName: (a.organizations || {}).name || '', email: (a.profiles || {}).email || '', sector: (a.organizations || {}).sector || '', score, completedAt: a.completed_at, reviewed: a.reviewed || false };
+        });
+      } catch(e) { audits = this.getAllAudits(); }
+    } else {
+      audits = this.getAllAudits();
+    }
     return `
     <div class="app-main-inner">
       <div class="page-header">
@@ -504,7 +562,7 @@ const Admin = {
                     ? '<span style="font-size:0.72rem;font-weight:700;color:var(--teal);background:var(--teal-pale);padding:3px 9px;border-radius:20px">✓ Reviewed</span>'
                     : '<span style="font-size:0.72rem;font-weight:700;color:var(--warning);background:var(--warning-light);padding:3px 9px;border-radius:20px">Pending Review</span>'}</td>
                   <td>
-                    ${!a.reviewed ? `<button class="btn-action btn-approve" onclick="Admin.markReviewed('${a.userId}')">Mark Reviewed</button>` : ''}
+                    ${!a.reviewed ? `<button class="btn-action btn-approve" onclick="Admin.markReviewed('${a.id || ''}','${a.userId}')">Mark Reviewed</button>` : ''}
                   </td>
                 </tr>`;
               }).join('')}
@@ -524,10 +582,14 @@ const Admin = {
     }).filter(Boolean).sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt));
   },
 
-  markReviewed(userId) {
-    const audit = PLATFORM.get('audit_' + userId);
-    if (audit) { audit.reviewed = true; PLATFORM.store('audit_' + userId, audit); }
-    this.showPage('audits');
+  async markReviewed(auditId, userId) {
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.markAuditReviewed(auditId); } catch(e) {}
+    } else {
+      const audit = PLATFORM.get('audit_' + userId);
+      if (audit) { audit.reviewed = true; PLATFORM.store('audit_' + userId, audit); }
+    }
+    await this.showPage('audits');
     PLATFORM.toast('✅ Audit marked as reviewed.');
   },
 
@@ -560,8 +622,13 @@ const Admin = {
   // ---------------------------------------------------------------------------
   // CONTENT / NEWS
   // ---------------------------------------------------------------------------
-  renderContent() {
-    const items = PLATFORM.get('news_items', []);
+  async renderContent() {
+    let items = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { items = await DB.getNewsItems(); } catch(e) { items = PLATFORM.get('news_items', []); }
+    } else {
+      items = PLATFORM.get('news_items', []);
+    }
     return `
     <div class="app-main-inner">
       <div class="page-header">
@@ -669,13 +736,12 @@ const Admin = {
 
   hideNewsForm() { const c = document.getElementById('news-form-card'); if(c) c.style.display='none'; this.editingNewsId = null; },
 
-  saveNews() {
+  async saveNews() {
     const title = document.getElementById('nf-title').value.trim();
-    const body = document.getElementById('nf-body').value.trim();
+    const body  = document.getElementById('nf-body').value.trim();
     if (!title || !body) { PLATFORM.toast('Please fill in the title and body text.'); return; }
-    const items = PLATFORM.get('news_items', []);
     const item = {
-      id: this.editingNewsId || 'n_' + Date.now(),
+      id: this.editingNewsId || null,
       date: document.getElementById('nf-date').value.trim() || new Date().getFullYear().toString(),
       badge: document.getElementById('nf-badge').value.trim() || 'Update',
       badgeClass: document.getElementById('nf-badge-class').value,
@@ -684,30 +750,41 @@ const Admin = {
       linkText: document.getElementById('nf-link-text').value.trim() || 'Read more ↗',
       published: document.getElementById('nf-published').checked
     };
-    if (this.editingNewsId) {
-      const idx = items.findIndex(x => x.id === this.editingNewsId);
-      if (idx >= 0) items[idx] = item; else items.push(item);
-    } else { items.push(item); }
-    PLATFORM.store('news_items', items);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.saveNewsItem(item); } catch(e) { PLATFORM.toast('Error saving: ' + e.message); return; }
+    } else {
+      item.id = item.id || 'n_' + Date.now();
+      const items = PLATFORM.get('news_items', []);
+      if (this.editingNewsId) { const idx = items.findIndex(x => x.id === this.editingNewsId); if (idx >= 0) items[idx] = item; else items.push(item); } else items.push(item);
+      PLATFORM.store('news_items', items);
+    }
     PLATFORM.toast('✅ Update saved and live on the website.');
-    this.showPage('content');
+    await this.showPage('content');
   },
 
-  editNews(id) { this.showPage('content'); setTimeout(() => this.showNewsForm(id), 50); },
+  async editNews(id) { await this.showPage('content'); setTimeout(() => this.showNewsForm(id), 50); },
 
-  deleteNews(id) {
+  async deleteNews(id) {
     if (!confirm('Delete this news update?')) return;
-    const items = PLATFORM.get('news_items', []).filter(n => n.id !== id);
-    PLATFORM.store('news_items', items);
-    this.showPage('content');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.deleteNewsItem(id); } catch(e) {}
+    } else {
+      PLATFORM.store('news_items', PLATFORM.get('news_items', []).filter(n => n.id !== id));
+    }
+    await this.showPage('content');
     PLATFORM.toast('Update deleted.');
   },
 
   // ---------------------------------------------------------------------------
   // DOCUMENTS
   // ---------------------------------------------------------------------------
-  renderDocuments() {
-    const docs = PLATFORM.get('doc_library', []);
+  async renderDocuments() {
+    let docs = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { docs = await DB.getDocuments(); } catch(e) { docs = PLATFORM.get('doc_library', []); }
+    } else {
+      docs = PLATFORM.get('doc_library', []);
+    }
     const types = ['Act', 'Guide', 'Template', 'Tool', 'Form', 'Policy'];
     return `
     <div class="app-main-inner">
@@ -799,32 +876,45 @@ const Admin = {
 
   hideDocForm() { const c = document.getElementById('doc-form-card'); if(c) c.style.display='none'; this.editingDocId=null; },
 
-  saveDoc() {
+  async saveDoc() {
     const title = document.getElementById('df-title').value.trim();
     if (!title) { PLATFORM.toast('Please enter a document title.'); return; }
-    const docs = PLATFORM.get('doc_library', []);
-    const doc = { id: this.editingDocId || 'd_' + Date.now(), title, type: document.getElementById('df-type').value, date: document.getElementById('df-date').value, desc: document.getElementById('df-desc').value.trim(), url: document.getElementById('df-url').value.trim() || '#' };
-    if (this.editingDocId) { const i = docs.findIndex(x => x.id === this.editingDocId); if(i>=0) docs[i]=doc; else docs.push(doc); }
-    else docs.push(doc);
-    PLATFORM.store('doc_library', docs);
+    const doc = { id: this.editingDocId || null, title, type: document.getElementById('df-type').value, date: document.getElementById('df-date').value, desc: document.getElementById('df-desc').value.trim(), url: document.getElementById('df-url').value.trim() || '#' };
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.saveDocument(doc); } catch(e) { PLATFORM.toast('Error saving: ' + e.message); return; }
+    } else {
+      doc.id = doc.id || 'd_' + Date.now();
+      const docs = PLATFORM.get('doc_library', []);
+      if (this.editingDocId) { const i = docs.findIndex(x => x.id === this.editingDocId); if(i>=0) docs[i]=doc; else docs.push(doc); } else docs.push(doc);
+      PLATFORM.store('doc_library', docs);
+    }
     PLATFORM.toast('✅ Document saved.');
-    this.showPage('documents');
+    await this.showPage('documents');
   },
 
-  editDoc(id) { this.showPage('documents'); setTimeout(() => this.showDocForm(id), 50); },
+  async editDoc(id) { await this.showPage('documents'); setTimeout(() => this.showDocForm(id), 50); },
 
-  deleteDoc(id) {
+  async deleteDoc(id) {
     if (!confirm('Remove this document from the library?')) return;
-    PLATFORM.store('doc_library', PLATFORM.get('doc_library', []).filter(d => d.id !== id));
-    this.showPage('documents');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.deleteDocument(id); } catch(e) {}
+    } else {
+      PLATFORM.store('doc_library', PLATFORM.get('doc_library', []).filter(d => d.id !== id));
+    }
+    await this.showPage('documents');
     PLATFORM.toast('Document removed.');
   },
 
   // ---------------------------------------------------------------------------
   // SETTINGS
   // ---------------------------------------------------------------------------
-  renderSettings() {
-    const s = PLATFORM.get('platform_settings', {});
+  async renderSettings() {
+    let s = {};
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { s = await DB.getSettings(); } catch(e) { s = PLATFORM.get('platform_settings', {}); }
+    } else {
+      s = PLATFORM.get('platform_settings', {});
+    }
     return `
     <div class="app-main-inner">
       <div class="page-header">
@@ -908,7 +998,7 @@ const Admin = {
     </div>`;
   },
 
-  saveSettings() {
+  async saveSettings() {
     const s = {
       requireApproval: document.getElementById('s-require-approval').checked,
       registrationOpen: document.getElementById('s-reg-open').checked,
@@ -916,7 +1006,11 @@ const Admin = {
       supportEmail: document.getElementById('s-email').value.trim(),
       dpoEmail: document.getElementById('s-dpo').value.trim()
     };
-    PLATFORM.store('platform_settings', s);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { await DB.saveSettings(s); } catch(e) { PLATFORM.toast('Error: ' + e.message); return; }
+    } else {
+      PLATFORM.store('platform_settings', s);
+    }
     PLATFORM.toast('✅ Settings saved successfully.');
   },
 

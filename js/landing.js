@@ -2,12 +2,17 @@
 // Landing Page Logic
 // =============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
   // Render admin-managed news
   const newsContainer = document.getElementById('news-container');
   if (newsContainer) {
-    const items = PLATFORM.get('news_items', []);
+    let items = [];
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try { items = await DB.getNewsItems(); } catch(e) { items = PLATFORM.get('news_items', []); }
+    } else {
+      items = PLATFORM.get('news_items', []);
+    }
     const published = items.filter(n => n.published !== false);
     newsContainer.innerHTML = published.map(n => `
       <div class="update-card">

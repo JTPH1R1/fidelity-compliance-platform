@@ -4,23 +4,51 @@
 
 const AuditApp = {
 
-  user: null,
+  user:     null,
+  orgData:  null,
   AUDIT_KEY: null,
   state: { answers: {}, notes: {}, currentSection: 0, startedAt: null, completedAt: null },
 
   // ---------------------------------------------------------------------------
-  init() {
-    const session = PLATFORM.requireAuth();
+  async init() {
+    const session = await PLATFORM.requireAuth();
     if (!session) return;
     this.user = session;
     this.AUDIT_KEY = 'audit_' + session.userId;
 
-    // Load saved state
-    const saved = PLATFORM.get(this.AUDIT_KEY);
-    if (saved) {
-      this.state = { ...this.state, ...saved };
+    // Load saved state: DB-first, localStorage fallback
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [dbAudit, profile] = await Promise.all([
+          DB.getLatestAudit(session.userId),
+          DB.getProfile(session.userId)
+        ]);
+        if (dbAudit) {
+          const normalized = DB.normalizeAudit(dbAudit);
+          this.state = { ...this.state, ...normalized };
+        } else {
+          this.state.startedAt = new Date().toISOString();
+        }
+        if (profile) {
+          const n = DB.normalizeProfile(profile);
+          this.orgData = { orgName: n.orgName, sector: n.sector, size: n.size };
+        }
+      } catch(e) {
+        console.warn('[Audit] DB load failed:', e.message);
+        const saved = PLATFORM.get(this.AUDIT_KEY);
+        if (saved) this.state = { ...this.state, ...saved };
+        else this.state.startedAt = new Date().toISOString();
+      }
     } else {
-      this.state.startedAt = new Date().toISOString();
+      const saved = PLATFORM.get(this.AUDIT_KEY);
+      if (saved) {
+        this.state = { ...this.state, ...saved };
+      } else {
+        this.state.startedAt = new Date().toISOString();
+      }
+      const users = PLATFORM.get('users', {});
+      const u = users[session.email] || {};
+      this.orgData = { orgName: u.orgName || session.orgName, sector: u.sector, size: u.size };
     }
 
     this.renderNav();
@@ -28,7 +56,6 @@ const AuditApp = {
     this.updateProgress();
     this.updateScore();
 
-    // Auto-print mode
     if (new URLSearchParams(window.location.search).get('print') === '1') {
       setTimeout(() => { this.showResults(); setTimeout(() => window.print(), 800); }, 400);
     }
@@ -36,6 +63,16 @@ const AuditApp = {
 
   save() {
     PLATFORM.store(this.AUDIT_KEY, this.state);
+    // Fire-and-forget DB sync
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      DB.saveAudit(
+        this.user.userId,
+        this.user.orgId,
+        this.state.answers,
+        this.state.notes,
+        this.state.completedAt || null
+      ).catch(e => console.warn('[Audit] DB save failed:', e.message));
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -260,15 +297,16 @@ const AuditApp = {
     // Log activity
     const score = this.calcOverall();
     const grade = this.getGrade(score);
-    Auth.logActivity(this.user.userId, 'audit', `Audit completed — ${grade.label} (${score}%)`);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      DB.logActivity(this.user.userId, 'audit', `Audit completed — ${grade.label} (${score}%)`).catch(() => {});
+    } else {
+      Auth.logActivity(this.user.userId, 'audit', `Audit completed — ${grade.label} (${score}%)`);
+    }
 
     const content = document.getElementById('audit-content');
     if (!content) return;
 
-    const org = (() => {
-      const users = PLATFORM.get('users', {});
-      return users[this.user.email] || {};
-    })();
+    const org = this.orgData || { orgName: this.user.orgName, sector: '', size: '' };
 
     // Collect critical flags
     const critFlags = [];

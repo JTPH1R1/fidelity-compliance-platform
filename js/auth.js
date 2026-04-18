@@ -68,7 +68,7 @@ const Auth = {
   // ---------------------------------------------------------------------------
   // Register
   // ---------------------------------------------------------------------------
-  register(e) {
+  async register(e) {
     e.preventDefault();
     const msg = document.getElementById('signup-message');
     const btn = document.getElementById('signup-btn');
@@ -91,19 +91,45 @@ const Auth = {
     if (pass !== pass2)  { this.showMsg(msg, 'error', 'Passwords do not match.'); return; }
     if (!terms) { this.showMsg(msg, 'error', 'You must accept the Terms of Service and Privacy Policy to proceed.'); return; }
 
-    // Check if email already registered
-    const users = PLATFORM.get('users', {});
-    if (users[email]) { this.showMsg(msg, 'error', 'An account with this email already exists. Please sign in instead.'); return; }
-
     btn.textContent = 'Creating account...';
     btn.disabled = true;
 
-    // Simulate slight delay
+    // DB path (Supabase)
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const data = await DB.signUp(email, pass);
+        // Note: disable email confirmation in Supabase project settings for this flow
+        const userId = data.user.id;
+        const now = new Date().toISOString();
+        const settings = await DB.getSettings();
+        const requireApproval = settings.requireApproval === true || settings.requireApproval === 'true';
+        const status = requireApproval ? 'pending' : 'active';
+        const org = await DB.createOrg(orgName, sector, size, '', 'free');
+        await DB.createProfile(userId, email, name, org.id, 'company_admin', status);
+        await DB.logActivity(userId, 'registration', `${orgName} account created`);
+        if (status === 'pending') {
+          this.showMsg(msg, 'success', 'Account created! Pending admin approval — you will be notified when activated.');
+          setTimeout(() => { window.location.href = 'auth.html'; }, 2200);
+        } else {
+          const session = { userId, email, orgName, name, role: 'company_admin', orgId: org.id, loginTime: now };
+          PLATFORM.store('currentUser', session);
+          this.showMsg(msg, 'success', 'Account created! Redirecting to your dashboard...');
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+        }
+      } catch(err) {
+        this.showMsg(msg, 'error', err.message);
+        btn.textContent = 'Create Account'; btn.disabled = false;
+      }
+      return;
+    }
+
+    // localStorage fallback
+    const users = PLATFORM.get('users', {});
+    if (users[email]) { this.showMsg(msg, 'error', 'An account with this email already exists. Please sign in instead.'); btn.textContent = 'Create Account'; btn.disabled = false; return; }
+
     setTimeout(() => {
-      // Create user record
       const userId = 'u_' + Date.now();
       const now = new Date().toISOString();
-
       const settings = PLATFORM.get('platform_settings', {});
       users[email] = {
         id: userId, email, name,
@@ -113,13 +139,10 @@ const Auth = {
         registeredAt: now, lastLogin: now,
         plan: 'free',
         status: settings.requireApproval ? 'pending' : 'active',
-        role: 'company_admin',
-        orgId: userId
+        role: 'company_admin', orgId: userId
       };
-
       PLATFORM.store('users', users);
       this.logActivity(userId, 'registration', `${orgName} account created`);
-
       if (settings.requireApproval) {
         this.showMsg(msg, 'success', 'Account created! Pending admin approval — you will be notified when activated.');
         setTimeout(() => { window.location.href = 'auth.html'; }, 2200);
@@ -135,7 +158,7 @@ const Auth = {
   // ---------------------------------------------------------------------------
   // Login
   // ---------------------------------------------------------------------------
-  login(e) {
+  async login(e) {
     e.preventDefault();
     const msg = document.getElementById('login-message');
     const btn = document.getElementById('login-btn');
@@ -152,6 +175,35 @@ const Auth = {
     btn.textContent = 'Signing in...';
     btn.disabled = true;
 
+    // DB path
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const data    = await DB.signIn(email, password);
+        const profile = await DB.getProfile(data.user.id);
+        if (!profile) throw new Error('Account profile not found. Please contact support.');
+        const n = DB.normalizeProfile(profile);
+        if (n.status === 'suspended') throw new Error('Your account has been suspended. Contact support@fidelityassessors.mw');
+        const settings = await DB.getSettings();
+        if (n.status === 'pending' && (settings.requireApproval === true || settings.requireApproval === 'true')) {
+          throw new Error('Your account is pending admin approval. You will be notified once activated.');
+        }
+        await Promise.all([
+          DB.updateProfile(data.user.id, { last_login: new Date().toISOString() }),
+          DB.logActivity(data.user.id, 'login', 'Signed in')
+        ]);
+        const session = { userId: n.id, email: n.email, orgName: n.orgName, name: n.name, role: n.role, orgId: n.orgId, loginTime: new Date().toISOString() };
+        PLATFORM.store('currentUser', session);
+        if (remember) PLATFORM.store('rememberedEmail', email);
+        this.showMsg(msg, 'success', n.role === 'platform_admin' ? 'Welcome, Administrator. Redirecting...' : 'Welcome back! Redirecting to your dashboard...');
+        setTimeout(() => { window.location.href = n.role === 'platform_admin' ? 'admin.html' : 'dashboard.html'; }, 1000);
+      } catch(err) {
+        this.showMsg(msg, 'error', err.message || 'Sign in failed. Please check your credentials.');
+        btn.textContent = 'Sign In to Dashboard'; btn.disabled = false;
+      }
+      return;
+    }
+
+    // localStorage fallback
     setTimeout(() => {
       // ---- Admin login ----
       if (email === this.ADMIN_EMAIL) {

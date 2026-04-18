@@ -4,34 +4,55 @@
 
 const Dashboard = {
 
-  user: null,
-  userData: null,
+  user:        null,
+  userData:    null,
+  auditState:  null,
+  activityLog: [],
+  checkins:    [],
 
   // ---------------------------------------------------------------------------
   // Init
   // ---------------------------------------------------------------------------
-  init() {
-    // Auth guard
-    const session = PLATFORM.requireAuth();
+  async init() {
+    const session = await PLATFORM.requireAuth();
     if (!session) return;
     this.user = session;
 
-    // Load full user data
-    const users = PLATFORM.get('users', {});
-    this.userData = users[session.email] || {};
+    // Load all data: DB-first, localStorage fallback
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [profile, auditRaw, activity, checkins] = await Promise.all([
+          DB.getProfile(session.userId),
+          DB.getLatestAudit(session.userId),
+          DB.getActivity(session.userId),
+          DB.getCheckins(session.userId)
+        ]);
+        this.userData    = profile  ? DB.normalizeProfile(profile) : {};
+        this.auditState  = auditRaw ? DB.normalizeAudit(auditRaw)  : null;
+        this.activityLog = activity  || [];
+        this.checkins    = checkins  || [];
+      } catch(e) {
+        console.warn('[Dashboard] DB load failed:', e.message);
+        this._loadFromLocalStorage(session);
+      }
+    } else {
+      this._loadFromLocalStorage(session);
+    }
 
     // Update nav
-    document.getElementById('nav-username').textContent = this.userData.orgName || session.orgName || 'Organization';
-    document.getElementById('nav-avatar').textContent = PLATFORM.initials(session.name || session.orgName);
+    const orgName = this.userData.orgName || session.orgName || 'Organization';
+    const name    = this.userData.name    || session.name    || '';
+    document.getElementById('nav-username').textContent = orgName;
+    document.getElementById('nav-avatar').textContent   = PLATFORM.initials(name || orgName);
 
     // Update sidebar
     const sidebarName = document.getElementById('sidebar-name');
     const sidebarLogo = document.getElementById('sidebar-logo');
-    if (sidebarName) sidebarName.textContent = this.userData.orgName || session.orgName;
-    if (sidebarLogo) sidebarLogo.textContent = PLATFORM.initials(this.userData.orgName || session.orgName);
+    if (sidebarName) sidebarName.textContent = orgName;
+    if (sidebarLogo) sidebarLogo.textContent = PLATFORM.initials(orgName);
 
-    // Update welcome
-    const firstName = (session.name || '').split(' ')[0] || 'Welcome';
+    // Update welcome greeting
+    const firstName = name.split(' ')[0] || 'Welcome';
     const welcomeEl = document.getElementById('welcome-title');
     if (welcomeEl) {
       const hr = new Date().getHours();
@@ -39,23 +60,20 @@ const Dashboard = {
       welcomeEl.textContent = `${greeting}, ${firstName}!`;
     }
 
-    // Load audit state
     this.loadAuditStats();
-
-    // Load profile
     this.loadProfileSummary();
-
-    // Load activity
     this.loadActivity();
-
-    // Load profile edit fields
     this.populateProfileForm();
-
-    // Render compliance schedule widget (if fiscal year is configured)
     this.renderComplianceScheduleWidget();
-
-    // Show compliance banner if needed
     this.checkComplianceBanner();
+  },
+
+  _loadFromLocalStorage(session) {
+    const users = PLATFORM.get('users', {});
+    this.userData    = users[session.email] || {};
+    this.auditState  = PLATFORM.get('audit_' + session.userId);
+    this.activityLog = PLATFORM.get('activity_' + session.userId, []);
+    this.checkins    = PLATFORM.get('chk_'     + session.userId, []);
   },
 
   // ---------------------------------------------------------------------------
@@ -91,8 +109,7 @@ const Dashboard = {
   // Load Audit Stats for dashboard widgets
   // ---------------------------------------------------------------------------
   loadAuditStats() {
-    const auditKey = 'audit_' + this.user.userId;
-    const auditState = PLATFORM.get(auditKey);
+    const auditState = this.auditState;
 
     if (!auditState || !auditState.completedAt) {
       // No completed audit
@@ -115,17 +132,12 @@ const Dashboard = {
     this.updateStatCard('stat-flags', String(flags), flags > 0 ? 'Needs immediate action' : 'No critical failures', null, null);
     this.updateStatCard('stat-answered', answered + '/65', 'Questions answered', null, null);
 
-    // Update audit widget
     this.renderAuditWidget(auditState, score, grade);
-
-    // Update flags widget
     this.renderFlagsWidget(auditState.answers || {});
 
-    // Update last audit in profile
     const lastAuditEl = document.getElementById('prof-last-audit');
     if (lastAuditEl) lastAuditEl.textContent = PLATFORM.formatDate(auditState.completedAt);
 
-    // Update audit history
     this.renderAuditHistory(auditState, score, grade);
   },
 
@@ -250,7 +262,7 @@ const Dashboard = {
   loadActivity() {
     const actList = document.getElementById('activity-list');
     if (!actList) return;
-    const log = PLATFORM.get('activity_' + this.user.userId, []);
+    const log = this.activityLog;
     if (log.length === 0) return;
 
     const iconMap = { audit: '📋', login: '🔑', registration: '🎉', report: '📊', flag: '🚨' };
@@ -287,37 +299,50 @@ const Dashboard = {
   // ---------------------------------------------------------------------------
   // Save profile
   // ---------------------------------------------------------------------------
-  saveProfile() {
-    const users = PLATFORM.get('users', {});
-    const user  = users[this.user.email];
-    if (!user) return;
-
+  async saveProfile() {
     const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
-    user.orgName        = val('edit-orgname') || user.orgName;
-    user.sector         = val('edit-sector')  || user.sector;
-    user.size           = val('edit-size');
-    user.address        = val('edit-address');
-    user.name           = val('edit-contact-name') || user.name;
-    user.contactRole    = val('edit-contact-role');
-    user.contactPhone   = val('edit-contact-phone');
-    const fy = document.getElementById('edit-fiscal-start');
-    if (fy && fy.value) user.fiscalYearStart = parseInt(fy.value);
+    const orgName     = val('edit-orgname')      || this.userData.orgName;
+    const sector      = val('edit-sector')       || this.userData.sector;
+    const size        = val('edit-size');
+    const address     = val('edit-address');
+    const contactName = val('edit-contact-name') || this.userData.name;
+    const contactRole = val('edit-contact-role');
+    const contactPhone= val('edit-contact-phone');
+    const fyEl        = document.getElementById('edit-fiscal-start');
+    const fiscalYearStart = fyEl && fyEl.value ? parseInt(fyEl.value) : this.userData.fiscalYearStart;
 
-    users[this.user.email] = user;
-    PLATFORM.store('users', users);
-    this.userData = user;
-
-    // Update session name
-    const session = PLATFORM.get('currentUser');
-    if (session) {
-      session.orgName = user.orgName;
-      session.name    = user.name;
-      PLATFORM.store('currentUser', session);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        await Promise.all([
+          DB.updateOrg(this.userData.orgId, { orgName, sector, size, address, fiscalYearStart }),
+          DB.updateProfile(this.user.userId, { name: contactName, contactRole, contactPhone })
+        ]);
+        await DB.logActivity(this.user.userId, 'profile', 'Company profile updated');
+      } catch(e) {
+        PLATFORM.toast('Error saving profile: ' + e.message); return;
+      }
+    } else {
+      const users = PLATFORM.get('users', {});
+      const user  = users[this.user.email];
+      if (!user) return;
+      user.orgName = orgName; user.sector = sector; user.size = size;
+      user.address = address; user.name = contactName;
+      user.contactRole = contactRole; user.contactPhone = contactPhone;
+      if (fiscalYearStart) user.fiscalYearStart = fiscalYearStart;
+      users[this.user.email] = user;
+      PLATFORM.store('users', users);
+      Auth.logActivity(this.user.userId, 'profile', 'Company profile updated');
     }
 
+    // Update cached state
+    this.userData = { ...this.userData, orgName, sector, size, address, name: contactName, contactRole, contactPhone, fiscalYearStart };
+
+    // Update session
+    const session = PLATFORM.get('currentUser');
+    if (session) { session.orgName = orgName; session.name = contactName; PLATFORM.store('currentUser', session); }
+
     this.loadProfileSummary();
-    Auth.logActivity(this.user.userId, 'profile', 'Company profile updated');
     PLATFORM.toast('✅ Profile saved successfully!');
     this.showPage('overview');
   },
@@ -388,19 +413,27 @@ const Dashboard = {
   // ---------------------------------------------------------------------------
   // Account deletion
   // ---------------------------------------------------------------------------
-  confirmDeleteAccount() {
+  async confirmDeleteAccount() {
     const confirmed = confirm(
       'Are you sure you want to permanently delete your account and all compliance data?\n\n' +
       'This action cannot be undone. All audit records and company data will be permanently removed.\n\n' +
       'Click OK to confirm deletion.'
     );
     if (!confirmed) return;
-    const users = PLATFORM.get('users', {});
-    delete users[this.user.email];
-    PLATFORM.store('users', users);
+
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        await DB.deleteProfile(this.user.userId);
+        await DB.signOut();
+      } catch(e) { alert('Error deleting account: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      delete users[this.user.email];
+      PLATFORM.store('users', users);
+      PLATFORM.remove('audit_' + this.user.userId);
+      PLATFORM.remove('activity_' + this.user.userId);
+    }
     PLATFORM.remove('currentUser');
-    PLATFORM.remove('audit_' + this.user.userId);
-    PLATFORM.remove('activity_' + this.user.userId);
     alert('Your account and all data have been deleted. You will now be redirected to the home page.');
     window.location.href = 'index.html';
   },
@@ -437,7 +470,7 @@ const Dashboard = {
     const { startDate, endDate } = quarter;
 
     // Check for completed audit within this quarter window
-    const auditState = PLATFORM.get('audit_' + this.user.userId);
+    const auditState = this.auditState;
     if (auditState && auditState.completedAt) {
       const d = new Date(auditState.completedAt);
       if (d >= startDate && d <= endDate) {
@@ -448,8 +481,7 @@ const Dashboard = {
     }
 
     // Check for manual check-in
-    const checkins = PLATFORM.get('chk_' + this.user.userId, []);
-    const checkin  = checkins.find(c => c.quarterId === quarter.id);
+    const checkin = this.checkins.find(c => c.quarterId === quarter.id);
     if (checkin) {
       return { done: true, icon: '✅', color: 'var(--teal)', label: 'Reviewed', score: checkin.score, gradeLabel: '', completedDate: checkin.completedAt };
     }
@@ -462,13 +494,23 @@ const Dashboard = {
     return          { done: false, icon: '🔄', color: 'var(--navy)',   label: 'In Progress', pct };
   },
 
-  logManualCheckin(quarterId) {
-    const checkins = PLATFORM.get('chk_' + this.user.userId, []);
-    const idx = checkins.findIndex(c => c.quarterId === quarterId);
+  async logManualCheckin(quarterId) {
     const entry = { quarterId, completedAt: new Date().toISOString(), method: 'manual', score: null };
-    if (idx >= 0) checkins[idx] = entry; else checkins.push(entry);
-    PLATFORM.store('chk_' + this.user.userId, checkins);
-    Auth.logActivity(this.user.userId, 'audit', `Logged manual compliance check-in for ${quarterId}`);
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        await DB.saveCheckin(this.user.userId, quarterId, null, 'manual');
+        await DB.logActivity(this.user.userId, 'audit', `Logged manual compliance check-in for ${quarterId}`);
+      } catch(e) { PLATFORM.toast('Error saving check-in: ' + e.message); return; }
+    } else {
+      const checkins = PLATFORM.get('chk_' + this.user.userId, []);
+      const idx = checkins.findIndex(c => c.quarterId === quarterId);
+      if (idx >= 0) checkins[idx] = entry; else checkins.push(entry);
+      PLATFORM.store('chk_' + this.user.userId, checkins);
+      Auth.logActivity(this.user.userId, 'audit', `Logged manual compliance check-in for ${quarterId}`);
+    }
+    // Update cache
+    const idx = this.checkins.findIndex(c => c.quarterId === quarterId);
+    if (idx >= 0) this.checkins[idx] = entry; else this.checkins.push(entry);
     PLATFORM.toast('✅ Manual check-in recorded.');
     this.renderCalendarPage();
     this.renderComplianceScheduleWidget();
@@ -697,20 +739,36 @@ const Dashboard = {
   // ---------------------------------------------------------------------------
   // Render Team Page
   // ---------------------------------------------------------------------------
-  renderTeamPage() {
+  async renderTeamPage() {
     const body = document.getElementById('team-page-body');
     if (!body) return;
 
-    const users      = PLATFORM.get('users', {});
-    const orgId      = this.userData.orgId || this.user.userId;
-    const myRole     = this.userData.role  || 'company_admin';
-    const canManage  = myRole === 'company_admin';
+    const orgId     = this.userData.orgId || this.user.userId;
+    const myRole    = this.userData.role  || 'company_admin';
+    const canManage = myRole === 'company_admin';
 
-    // All members of this org
-    const teamMembers = Object.values(users).filter(u => (u.orgId || u.id) === orgId);
+    let teamMembers = [], requests = [];
 
-    // Pending officer requests for this org
-    const requests = PLATFORM.get('officer_requests', []).filter(r => r.orgId === orgId && r.status === 'pending');
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const [allProfiles, allRequests] = await Promise.all([
+          DB.getAllProfiles(),
+          DB.getPendingRequestsForOrg(orgId)
+        ]);
+        teamMembers = allProfiles
+          .filter(p => p.org_id === orgId)
+          .map(p => DB.normalizeProfile(p));
+        requests = allRequests.map(r => ({
+          id: r.id, orgId: r.org_id, orgName: r.org_name,
+          requestedBy: r.requested_by, name: r.name, email: r.email,
+          status: r.status, createdAt: r.created_at
+        }));
+      } catch(e) { console.warn('[Team] DB load failed:', e.message); }
+    } else {
+      const users = PLATFORM.get('users', {});
+      teamMembers = Object.values(users).filter(u => (u.orgId || u.id) === orgId);
+      requests    = PLATFORM.get('officer_requests', []).filter(r => r.orgId === orgId && r.status === 'pending');
+    }
 
     const roleChip = (role) => {
       const isAdmin = role === 'company_admin';
@@ -789,7 +847,7 @@ const Dashboard = {
   // ---------------------------------------------------------------------------
   // Submit officer add request
   // ---------------------------------------------------------------------------
-  submitOfficerRequest() {
+  async submitOfficerRequest() {
     const name  = (document.getElementById('officer-name')  || {}).value || '';
     const email = (document.getElementById('officer-email') || {}).value || '';
     const trimName  = name.trim();
@@ -798,29 +856,26 @@ const Dashboard = {
     if (!trimName || !trimEmail) { PLATFORM.toast('Please enter both name and email.'); return; }
     if (!trimEmail.includes('@')) { PLATFORM.toast('Please enter a valid email address.'); return; }
 
-    const users = PLATFORM.get('users', {});
-    if (users[trimEmail]) { PLATFORM.toast('An account with this email already exists.'); return; }
+    const orgId   = this.userData.orgId || this.user.userId;
+    const orgName = this.userData.orgName || this.user.orgName;
 
-    const orgId = this.userData.orgId || this.user.userId;
-    const requests = PLATFORM.get('officer_requests', []);
-
-    if (requests.some(r => r.email === trimEmail && r.status === 'pending')) {
-      PLATFORM.toast('A pending request for this email already exists.'); return;
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        await DB.createOfficerRequest(orgId, this.user.userId, orgName, trimName, trimEmail);
+        await DB.logActivity(this.user.userId, 'team', `Requested to add ${trimName} as compliance officer`);
+      } catch(e) { PLATFORM.toast('Error submitting request: ' + e.message); return; }
+    } else {
+      const users = PLATFORM.get('users', {});
+      if (users[trimEmail]) { PLATFORM.toast('An account with this email already exists.'); return; }
+      const requests = PLATFORM.get('officer_requests', []);
+      if (requests.some(r => r.email === trimEmail && r.status === 'pending')) {
+        PLATFORM.toast('A pending request for this email already exists.'); return;
+      }
+      requests.push({ id: 'req_' + Date.now(), orgId, orgName, requestedBy: this.user.email, name: trimName, email: trimEmail, status: 'pending', createdAt: new Date().toISOString() });
+      PLATFORM.store('officer_requests', requests);
+      Auth.logActivity(this.user.userId, 'team', `Requested to add ${trimName} as compliance officer`);
     }
 
-    requests.push({
-      id: 'req_' + Date.now(),
-      orgId,
-      orgName: this.userData.orgName || this.user.orgName,
-      requestedBy: this.user.email,
-      name: trimName,
-      email: trimEmail,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
-
-    PLATFORM.store('officer_requests', requests);
-    Auth.logActivity(this.user.userId, 'team', `Requested to add ${trimName} as compliance officer`);
     PLATFORM.toast('✅ Request submitted — awaiting admin approval.');
     this.renderTeamPage();
   },
