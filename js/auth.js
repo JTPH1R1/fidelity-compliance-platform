@@ -288,10 +288,23 @@ const Auth = {
   // ---------------------------------------------------------------------------
   // Init (auth.html page)
   // ---------------------------------------------------------------------------
-  init() {
-    // Check if already logged in
-    const user = PLATFORM.get('currentUser');
-    if (user) { window.location.href = 'dashboard.html'; return; }
+  async init() {
+    // Check if already logged in via DB session
+    if (typeof DB_READY === 'function' && DB_READY()) {
+      try {
+        const session = await DB.getSession();
+        if (session) {
+          const profile = await DB.getProfile(session.user.id);
+          if (profile) {
+            window.location.href = profile.role === 'platform_admin' ? 'admin.html' : 'dashboard.html';
+            return;
+          }
+        }
+      } catch(e) {}
+    } else {
+      const user = PLATFORM.get('currentUser');
+      if (user) { window.location.href = user.isAdmin ? 'admin.html' : 'dashboard.html'; return; }
+    }
 
     // Handle URL hash for tab
     if (window.location.hash === '#signup') this.showTab('signup');

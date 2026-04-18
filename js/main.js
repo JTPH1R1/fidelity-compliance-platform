@@ -88,6 +88,8 @@ const PLATFORM = {
           }
         }
       } catch(e) { console.warn('[PLATFORM] requireAuth DB check failed:', e.message); }
+      // No valid DB session — clear stale localStorage to break any redirect loop
+      PLATFORM.remove('currentUser');
       window.location.href = 'auth.html';
       return null;
     }
@@ -113,6 +115,7 @@ const PLATFORM = {
           if (session) { window.location.href = 'dashboard.html'; return null; }
         }
       } catch(e) { console.warn('[PLATFORM] requireAdmin DB check failed:', e.message); }
+      PLATFORM.remove('currentUser');
       window.location.href = 'auth.html';
       return null;
     }
